@@ -8,7 +8,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "import:obf": "ts-node-dev --transpile-only --once src/scripts/importObfBulk.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
