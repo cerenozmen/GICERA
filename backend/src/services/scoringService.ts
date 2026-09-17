@@ -1,4 +1,4 @@
-import { restrictedIngredientSeed } from "../data/restrictedIngredients";
+import { getRestrictedSubstanceAliasIndex } from "./restrictedSubstancesCache";
 import { CleanRating, FlaggedIngredient, RestrictionType, ScoringResult } from "../types/product";
 
 const PENALTY_BY_TYPE: Record<RestrictionType, number> = {
@@ -12,24 +12,41 @@ function normalize(name: string): string {
   return name.trim().toLowerCase();
 }
 
-// alias -> seed entry, built once at module load
-const aliasIndex = new Map<string, (typeof restrictedIngredientSeed)[number]>();
-for (const entry of restrictedIngredientSeed) {
-  for (const alias of entry.aliases) {
-    aliasIndex.set(normalize(alias), entry);
-  }
-}
-
 /**
  * Splits a raw OBF "ingredients_text" (comma-separated INCI names) into
- * individual normalized ingredient tokens.
+ * individual normalized ingredient tokens. Parenthesised content is dropped,
+ * but only after splitting so that commas *inside* parentheses (e.g. "oils
+ * (may include lemon, lime, orange)") don't get sliced into bare words like
+ * "orange" that could coincidentally match an unrelated restricted alias.
  */
 export function parseIngredientsText(ingredientsText: string | null | undefined): string[] {
   if (!ingredientsText) return [];
-  return ingredientsText
-    .split(/[,;]/)
-    .map((token) => token.replace(/\([^)]*\)/g, "").trim())
-    .filter((token) => token.length > 0);
+
+  const tokens: string[] = [];
+  let current = "";
+  let depth = 0;
+
+  for (const char of ingredientsText) {
+    if (char === "(") {
+      depth++;
+      continue;
+    }
+    if (char === ")") {
+      depth = Math.max(0, depth - 1);
+      continue;
+    }
+    if ((char === "," || char === ";") && depth === 0) {
+      tokens.push(current.trim());
+      current = "";
+      continue;
+    }
+    if (depth === 0) {
+      current += char;
+    }
+  }
+  tokens.push(current.trim());
+
+  return tokens.filter((token) => token.length > 0);
 }
 
 function ratingFromScore(score: number): CleanRating {
@@ -39,6 +56,7 @@ function ratingFromScore(score: number): CleanRating {
 }
 
 export function scoreIngredients(ingredientTokens: string[]): ScoringResult {
+  const aliasIndex = getRestrictedSubstanceAliasIndex();
   const flagged: FlaggedIngredient[] = [];
   let score = 100;
   let pregnancySafe = true;

@@ -3,6 +3,7 @@ import { createInterface } from "readline";
 import { Readable } from "stream";
 import { createGunzip, Gunzip } from "zlib";
 import { supabase } from "../db/supabaseClient";
+import { loadRestrictedSubstances } from "../services/restrictedSubstancesCache";
 import { scoreIngredientsText } from "../services/scoringService";
 import { ProductSource, CleanRating, FlaggedIngredient } from "../types/product";
 
@@ -104,6 +105,8 @@ async function openGunzippedLineStream(options: CliOptions): Promise<Gunzip> {
 }
 
 async function main(): Promise<void> {
+  await loadRestrictedSubstances();
+
   const options = parseArgs(process.argv.slice(2));
   console.log(
     `OBF bulk import starting. source=${options.file ?? options.url} limit=${options.limit ?? "none"} dryRun=${options.dryRun}`
