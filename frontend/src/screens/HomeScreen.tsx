@@ -80,11 +80,16 @@ export function HomeScreen({ navigation }: Props) {
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hList}>
           {history.slice(0, 8).map((item) => (
-            <Pressable key={item.barcode} style={styles.miniCard} onPress={() => navigation.navigate("ProductDetail", { barcode: item.barcode })}>
+            <Pressable key={item.barcode} style={styles.miniCard} onPress={() => navigation.navigate("ProductDetail", { barcode: item.barcode, product: item.product })}>
               <Thumb uri={item.imageUrl} size={64} />
               <Text style={styles.miniTitle} numberOfLines={2}>
                 {item.productName ?? "İsimsiz ürün"}
               </Text>
+              {item.product && item.brands && (
+                <Text style={styles.miniSub} numberOfLines={2}>
+                  {item.brands}
+                </Text>
+              )}
               <ScoreChip rating={item.cleanRating} score={item.cleanScore} />
             </Pressable>
           ))}
@@ -138,5 +143,6 @@ const styles = StyleSheet.create({
   muted: { color: colors.muted },
   hList: { paddingHorizontal: 20, gap: 12 },
   miniCard: { width: 140, backgroundColor: colors.card, borderRadius: 18, padding: 12, gap: 8, alignItems: "flex-start", ...shadow },
+  miniSub: { fontSize: 11, color: colors.muted },
   miniTitle: { fontSize: 13, fontWeight: "600", color: colors.text },
 });

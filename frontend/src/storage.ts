@@ -8,6 +8,8 @@ export interface ProductSnapshot {
   imageUrl: string | null;
   cleanScore: number | null;
   cleanRating: Product["cleanRating"];
+  /** Full product, kept only for own-list analyses ("custom:" barcodes) because the server can't return them again. */
+  product?: Product;
 }
 
 export interface Settings {
@@ -61,5 +63,6 @@ export function toSnapshot(product: Product): ProductSnapshot {
     imageUrl: product.imageUrl,
     cleanScore: product.cleanScore,
     cleanRating: product.cleanRating,
+    ...(product.barcode.startsWith("custom:") ? { product } : {}),
   };
 }

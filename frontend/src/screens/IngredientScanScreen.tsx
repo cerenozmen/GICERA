@@ -5,14 +5,17 @@ import { useRef, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { analyzeIngredientsText, extractIngredientsFromImage } from "../api";
+import { useApp } from "../AppContext";
 import { ScreenHeader } from "../components/common";
 import { RootStackParamList } from "../navigation/types";
 import { colors } from "../theme";
+import { Product } from "../types";
 
 type Step = "capture" | "reading" | "edit" | "analyzing";
 
 export function IngredientScanScreen({ navigation, route }: NativeStackScreenProps<RootStackParamList, "IngredientScan">) {
   const insets = useSafeAreaInsets();
+  const { recordScan } = useApp();
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
   const [step, setStep] = useState<Step>("capture");
@@ -45,20 +48,22 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
     setStep("analyzing");
     try {
       const result = await analyzeIngredientsText(text.trim());
-      navigation.replace("ProductDetail", {
-        barcode: `custom:${Date.now()}`,
-        product: {
-          barcode: "",
-          productName: route.params?.productName ?? "Kendi taramam",
-          brands: null,
-          ingredientsText: result.ingredientsText,
-          imageUrl: null,
-          cleanScore: result.cleanScore,
-          cleanRating: result.cleanRating,
-          pregnancySafe: result.pregnancySafe,
-          flaggedIngredients: result.flaggedIngredients,
-        },
-      });
+      const id = `custom:${Date.now()}`;
+      const now = new Date();
+      const stamp = `${String(now.getDate()).padStart(2, "0")}.${String(now.getMonth() + 1).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      const product: Product = {
+        barcode: id,
+        productName: route.params?.productName ?? "Kendi taramam",
+        brands: `Kendi içerik listem · ${stamp}`,
+        ingredientsText: result.ingredientsText,
+        imageUrl: null,
+        cleanScore: result.cleanScore,
+        cleanRating: result.cleanRating,
+        pregnancySafe: result.pregnancySafe,
+        flaggedIngredients: result.flaggedIngredients,
+      };
+      recordScan(product);
+      navigation.replace("ProductDetail", { barcode: id, product });
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Analiz yapılamadı.");
       setStep("edit");
