@@ -8,6 +8,8 @@ import { loadRestrictedSubstances } from "./services/restrictedSubstancesCache";
 const app = express();
 
 app.use(cors());
+// photo uploads (base64) exceed the default 100kb JSON limit
+app.use("/api/analyze/image", express.json({ limit: "8mb" }));
 app.use(express.json());
 
 app.get("/health", (_req, res) => {

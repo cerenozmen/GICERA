@@ -62,18 +62,17 @@ export function scoreIngredients(ingredientTokens: string[]): ScoringResult {
   let pregnancySafe = true;
 
   for (const token of ingredientTokens) {
-    const match = aliasIndex.get(normalize(token));
-    if (!match) continue;
+    for (const match of aliasIndex.get(normalize(token)) ?? []) {
+      flagged.push({
+        inciName: match.inciName,
+        restrictionType: match.restrictionType,
+        notes: match.notes,
+      });
 
-    flagged.push({
-      inciName: match.inciName,
-      restrictionType: match.restrictionType,
-      notes: match.notes,
-    });
-
-    score -= PENALTY_BY_TYPE[match.restrictionType];
-    if (match.restrictionType === "pregnancy_unsafe") {
-      pregnancySafe = false;
+      score -= PENALTY_BY_TYPE[match.restrictionType];
+      if (match.restrictionType === "pregnancy_unsafe") {
+        pregnancySafe = false;
+      }
     }
   }
 

@@ -88,10 +88,39 @@ async function cacheProductFromOBF(barcode: string, obfProduct: {
  * 2) bulunamazsa Open Beauty Facts canlı API'sinden çek ve cache'le
  * 3) orada da yoksa "bulunamadı" döndür (frontend kullanıcı katkısı akışına yönlendirir)
  */
+const LIVE_RECHECK_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * A stored product with no ingredient list may have been completed on Open
+ * Beauty Facts since the bulk dump, so re-check the live API - at most once a
+ * day per product, since updated_at is bumped on every check.
+ */
+async function refreshIfIngredientsMissing(cached: ProductRecord): Promise<ProductRecord> {
+  if (cached.ingredientsText?.trim()) return cached;
+  if (Date.now() - new Date(cached.updatedAt).getTime() < LIVE_RECHECK_MS) return cached;
+
+  try {
+    const obfProduct = await fetchProductFromOBF(cached.barcode);
+    if (obfProduct?.ingredients_text?.trim()) {
+      return await cacheProductFromOBF(cached.barcode, obfProduct);
+    }
+    const { data, error } = await supabase
+      .from("products")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("barcode", cached.barcode)
+      .select("*")
+      .single<ProductRow>();
+    return error || !data ? cached : rowToRecord(data);
+  } catch {
+    // live source unreachable: serve what we already have
+    return cached;
+  }
+}
+
 export async function lookupProductByBarcode(barcode: string): Promise<ProductLookupResponse> {
   const cached = await findCachedProduct(barcode);
   if (cached) {
-    return { found: true, product: cached };
+    return { found: true, product: await refreshIfIngredientsMissing(cached) };
   }
 
   const obfProduct = await fetchProductFromOBF(barcode);
