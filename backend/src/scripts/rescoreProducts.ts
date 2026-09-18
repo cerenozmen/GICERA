@@ -46,10 +46,10 @@ async function main(): Promise<void> {
       const scoring = scoreIngredientsText(product.ingredients_text);
       return {
         barcode: product.barcode,
-        clean_score: scoring.cleanScore,
-        clean_rating: scoring.cleanRating,
-        pregnancy_safe: scoring.pregnancySafe,
-        flagged_ingredients: scoring.flaggedIngredients,
+        clean_score: scoring?.cleanScore ?? null,
+        clean_rating: scoring?.cleanRating ?? null,
+        pregnancy_safe: scoring?.pregnancySafe ?? null,
+        flagged_ingredients: scoring?.flaggedIngredients ?? [],
         updated_at: new Date().toISOString(),
       };
     });

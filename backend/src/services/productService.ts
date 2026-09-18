@@ -62,10 +62,10 @@ async function cacheProductFromOBF(barcode: string, obfProduct: {
     ingredients_text: obfProduct.ingredients_text ?? null,
     image_url: obfProduct.image_url ?? null,
     source: "obf_live" as const,
-    clean_score: scoring.cleanScore,
-    clean_rating: scoring.cleanRating,
-    pregnancy_safe: scoring.pregnancySafe,
-    flagged_ingredients: scoring.flaggedIngredients,
+    clean_score: scoring?.cleanScore ?? null,
+    clean_rating: scoring?.cleanRating ?? null,
+    pregnancy_safe: scoring?.pregnancySafe ?? null,
+    flagged_ingredients: scoring?.flaggedIngredients ?? [],
     updated_at: new Date().toISOString(),
   };
 

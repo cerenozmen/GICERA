@@ -53,9 +53,9 @@ interface ProductUpsertRow {
   ingredients_text: string | null;
   image_url: string | null;
   source: ProductSource;
-  clean_score: number;
-  clean_rating: CleanRating;
-  pregnancy_safe: boolean;
+  clean_score: number | null;
+  clean_rating: CleanRating | null;
+  pregnancy_safe: boolean | null;
   flagged_ingredients: FlaggedIngredient[];
   updated_at: string;
 }
@@ -76,10 +76,10 @@ function toProductRow(raw: ObfBulkRecord & { ingredients_text?: string }): Produ
     // internal image ids); the live OBF API fallback fills images in on demand.
     image_url: null,
     source: "obf_bulk",
-    clean_score: scoring.cleanScore,
-    clean_rating: scoring.cleanRating,
-    pregnancy_safe: scoring.pregnancySafe,
-    flagged_ingredients: scoring.flaggedIngredients,
+    clean_score: scoring?.cleanScore ?? null,
+    clean_rating: scoring?.cleanRating ?? null,
+    pregnancy_safe: scoring?.pregnancySafe ?? null,
+    flagged_ingredients: scoring?.flaggedIngredients ?? [],
     updated_at: new Date().toISOString(),
   };
 }

@@ -87,6 +87,8 @@ export function scoreIngredients(ingredientTokens: string[]): ScoringResult {
   };
 }
 
-export function scoreIngredientsText(ingredientsText: string | null | undefined): ScoringResult {
-  return scoreIngredients(parseIngredientsText(ingredientsText));
+/** Returns null when there is no ingredient list: an empty list must not read as "clean". */
+export function scoreIngredientsText(ingredientsText: string | null | undefined): ScoringResult | null {
+  const tokens = parseIngredientsText(ingredientsText);
+  return tokens.length > 0 ? scoreIngredients(tokens) : null;
 }
