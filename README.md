@@ -11,7 +11,7 @@ Kullanıcıların ürün barkodu okutarak içerik/temizlik analizi yapabildiği,
 
 | Katman | Teknoloji |
 |---|---|
-| Frontend | React |
+| Frontend | React Native (CLI, Expo'suz) |
 | Backend | Node.js + TypeScript |
 | Veritabanı | PostgreSQL (Supabase) |
 | Sunucu / Altyapı | Supabase |
@@ -27,12 +27,30 @@ Kullanıcıların ürün barkodu okutarak içerik/temizlik analizi yapabildiği,
 
 ```
 GICERA/
-├── frontend/          # React mobil uygulama
+├── frontend/          # React Native CLI mobil uygulama (android/, ios/ dahil)
 ├── backend/           # Node.js + TypeScript API
 ├── database/
 │   └── migrations/    # Supabase/PostgreSQL migration dosyaları
 └── docs/              # Mimari notlar, veri modeli, skorlama kuralları
 ```
+
+## Mobil Uygulamayı Çalıştırma (React Native CLI)
+
+Gereksinimler: Node 22+, JDK 17, Android Studio (Android SDK + emülatör). iOS için macOS + Xcode + CocoaPods.
+
+```bash
+# 1) Backend (ayrı terminal)
+cd backend && npm install && npm run dev
+
+# 2) Mobil uygulama
+cd frontend
+npm install
+npx react-native start          # Metro
+npx react-native run-android    # başka bir terminalde (emülatör açık olmalı)
+```
+
+- Emülatör API'ye `10.0.2.2:4000` üzerinden ulaşır. Fiziksel cihazda [frontend/src/config.ts](frontend/src/config.ts) içindeki `DEVICE_HOST` değerine bilgisayarın yerel IP'sini yaz.
+- Kamera: `react-native-vision-camera` (barkod tarama + içerik listesi fotoğrafı). Emülatörde sanal kamera kullanılabilir, gerçek test için cihaz önerilir.
 
 ## Branch Stratejisi
 

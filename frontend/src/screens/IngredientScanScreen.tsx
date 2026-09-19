@@ -1,9 +1,10 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRef, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import RNFS from "react-native-fs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Camera, useCameraDevice, useCameraPermission } from "react-native-vision-camera";
 import { analyzeIngredientsText, extractIngredientsFromImage } from "../api";
 import { useApp } from "../AppContext";
 import { ScreenHeader } from "../components/common";
@@ -16,8 +17,9 @@ type Step = "capture" | "reading" | "edit" | "analyzing";
 export function IngredientScanScreen({ navigation, route }: NativeStackScreenProps<RootStackParamList, "IngredientScan">) {
   const insets = useSafeAreaInsets();
   const { recordScan } = useApp();
-  const [permission, requestPermission] = useCameraPermissions();
-  const camera = useRef<CameraView>(null);
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const device = useCameraDevice("back");
+  const camera = useRef<Camera>(null);
   const [step, setStep] = useState<Step>("capture");
   const [text, setText] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -27,9 +29,12 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
     setMessage(null);
     setStep("reading");
     try {
-      const photo = await camera.current.takePictureAsync({ base64: true, quality: 0.5 });
-      if (!photo.base64) throw new Error("Fotoğraf alınamadı.");
-      const extracted = await extractIngredientsFromImage(photo.base64);
+      const photo = await camera.current.takePhoto({ flash: "off" });
+      const path = photo.path.startsWith("file://") ? photo.path : `file://${photo.path}`;
+      const base64 = await RNFS.readFile(path, "base64");
+      RNFS.unlink(path).catch(() => {});
+      if (!base64) throw new Error("Fotoğraf alınamadı.");
+      const extracted = await extractIngredientsFromImage(base64);
       if (extracted === null) {
         setMessage("Fotoğrafta okunabilir bir içerik listesi bulunamadı. Listeyi daha yakından ve net çekmeyi dene.");
         setStep("capture");
@@ -101,9 +106,7 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
     );
   }
 
-  if (!permission) return <View style={styles.dark} />;
-
-  if (!permission.granted) {
+  if (!hasPermission) {
     return (
       <View style={[styles.dark, styles.center]}>
         <Ionicons name="camera-outline" size={48} color="#fff" />
@@ -120,7 +123,7 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
 
   return (
     <View style={styles.dark}>
-      <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" />
+      {device && <Camera ref={camera} style={StyleSheet.absoluteFill} device={device} isActive photo />}
 
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <Pressable onPress={() => navigation.goBack()} hitSlop={12}>

@@ -1,4 +1,5 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
+import type { IconName } from "../components/icons";
 import { CompositeScreenProps } from "@react-navigation/native";
 import { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -63,7 +64,7 @@ function Stat({ value, label }: { value: number; label: string }) {
   );
 }
 
-function MenuRow({ icon, label, onPress, divider }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; divider?: boolean }) {
+function MenuRow({ icon, label, onPress, divider }: { icon: IconName; label: string; onPress: () => void; divider?: boolean }) {
   return (
     <Pressable style={[styles.menuRow, divider && styles.divider]} onPress={onPress}>
       <Ionicons name={icon} size={22} color={colors.danger} />

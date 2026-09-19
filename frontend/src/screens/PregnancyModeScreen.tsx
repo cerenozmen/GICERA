@@ -1,4 +1,5 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
+import type { IconName } from "../components/icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { useApp } from "../AppContext";
@@ -7,7 +8,7 @@ import { RootStackParamList } from "../navigation/types";
 import { Settings } from "../storage";
 import { colors, serif, shadow } from "../theme";
 
-const OPTIONS: { key: keyof Settings; icon: keyof typeof Ionicons.glyphMap; title: string; text: string }[] = [
+const OPTIONS: { key: keyof Settings; icon: IconName; title: string; text: string }[] = [
   { key: "pregnancyMode", icon: "woman-outline", title: "Hamilelik Modu Aktif", text: "Ürün sayfalarında hamilelik değerlendirmesini göster." },
   { key: "highlightRisky", icon: "heart-outline", title: "Riskli içerikleri göster", text: "Hamilelikte önerilmeyen içerikleri kırmızı ile işaretle." },
   { key: "showNotes", icon: "information-circle-outline", title: "Bilgilendirici notlar", text: "İşaretlenen içeriklerin açıklamalarını göster." },
