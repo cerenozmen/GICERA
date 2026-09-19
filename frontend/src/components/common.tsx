@@ -1,4 +1,5 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
+import type { IconName } from "./icons";
 import { ReactNode } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -75,7 +76,7 @@ export function ProductRow({ item, onPress }: { item: ProductSnapshot; onPress: 
   );
 }
 
-export function EmptyState({ icon, title, text, children }: { icon: keyof typeof Ionicons.glyphMap; title: string; text: string; children?: ReactNode }) {
+export function EmptyState({ icon, title, text, children }: { icon: IconName; title: string; text: string; children?: ReactNode }) {
   return (
     <View style={styles.empty}>
       <Ionicons name={icon} size={44} color={colors.primary} />

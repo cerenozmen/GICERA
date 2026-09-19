@@ -1,9 +1,9 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Camera, useCameraDevice, useCameraPermission, useCodeScanner } from "react-native-vision-camera";
 import { lookupBarcode } from "../api";
 import { useApp } from "../AppContext";
 import { RootStackParamList } from "../navigation/types";
@@ -12,7 +12,8 @@ import { colors } from "../theme";
 export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParamList, "Scan">) {
   const insets = useSafeAreaInsets();
   const { recordScan } = useApp();
-  const [permission, requestPermission] = useCameraPermissions();
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const device = useCameraDevice("back");
   const [torch, setTorch] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -20,6 +21,13 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
   const [manualOpen, setManualOpen] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const lastCode = useRef<string | null>(null);
+  const codeScanner = useCodeScanner({
+    codeTypes: ["ean-13", "ean-8", "upc-a", "upc-e"],
+    onCodeScanned: (codes) => {
+      const value = codes[0]?.value;
+      if (value) handleCode(value);
+    },
+  });
 
   async function handleCode(code: string) {
     if (busy || code === lastCode.current) return;
@@ -46,9 +54,7 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
     }
   }
 
-  if (!permission) return <View style={styles.dark} />;
-
-  if (!permission.granted) {
+  if (!hasPermission) {
     return (
       <View style={[styles.dark, styles.center]}>
         <Ionicons name="camera-outline" size={48} color="#fff" />
@@ -65,12 +71,15 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
 
   return (
     <View style={styles.dark}>
-      <CameraView
-        style={StyleSheet.absoluteFill}
-        enableTorch={torch}
-        barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"] }}
-        onBarcodeScanned={({ data }) => handleCode(data)}
-      />
+      {device && (
+        <Camera
+          style={StyleSheet.absoluteFill}
+          device={device}
+          isActive
+          torch={torch && device.hasTorch ? "on" : "off"}
+          codeScanner={codeScanner}
+        />
+      )}
 
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
