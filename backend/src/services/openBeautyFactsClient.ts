@@ -23,6 +23,9 @@ export async function fetchProductFromOBF(barcode: string): Promise<OBFProduct |
     headers: { "User-Agent": "GICERA-App/0.1 (skincare barcode analysis)" },
   });
 
+  if (response.status === 404) {
+    return null;
+  }
   if (!response.ok) {
     throw new Error(`Open Beauty Facts API error: ${response.status}`);
   }

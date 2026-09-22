@@ -1,7 +1,8 @@
 import { Platform } from "react-native";
 
 // Android emulator reaches the host machine via 10.0.2.2; for a physical device set
-// DEVICE_HOST below to your computer's LAN IP (e.g. "192.168.1.20").
+// DEVICE_HOST below to your computer's LAN IP (e.g. "192.168.1.20"). Keep this as a
+// local-only edit — don't commit your personal IP, it won't work on anyone else's network.
 const DEVICE_HOST: string | null = null;
 
 const DEFAULT_HOST = DEVICE_HOST ?? (Platform.OS === "android" ? "10.0.2.2" : "localhost");

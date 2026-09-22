@@ -2,8 +2,9 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Camera } from "react-native-camera-kit";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Camera, useCameraDevice, useCameraPermission, useCodeScanner } from "react-native-vision-camera";
+import { useCameraPermission } from "react-native-vision-camera";
 import { lookupBarcode } from "../api";
 import { useApp } from "../AppContext";
 import { RootStackParamList } from "../navigation/types";
@@ -13,7 +14,6 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
   const insets = useSafeAreaInsets();
   const { recordScan } = useApp();
   const { hasPermission, requestPermission } = useCameraPermission();
-  const device = useCameraDevice("back");
   const [torch, setTorch] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -21,13 +21,6 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
   const [manualOpen, setManualOpen] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const lastCode = useRef<string | null>(null);
-  const codeScanner = useCodeScanner({
-    codeTypes: ["ean-13", "ean-8", "upc-a", "upc-e"],
-    onCodeScanned: (codes) => {
-      const value = codes[0]?.value;
-      if (value) handleCode(value);
-    },
-  });
 
   async function handleCode(code: string) {
     if (busy || code === lastCode.current) return;
@@ -71,13 +64,17 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
 
   return (
     <View style={styles.dark}>
-      {device && (
+      {hasPermission && (
         <Camera
           style={StyleSheet.absoluteFill}
-          device={device}
-          isActive
-          torch={torch && device.hasTorch ? "on" : "off"}
-          codeScanner={codeScanner}
+          torchMode={torch ? "on" : "off"}
+          scanBarcode
+          allowedBarcodeTypes={["ean-13", "ean-8", "upc-a", "upc-e", "code-128"]}
+          onReadCode={(event) => {
+            console.log("[ScanScreen] onReadCode", event.nativeEvent);
+            handleCode(event.nativeEvent.codeStringValue);
+          }}
+          onError={(event) => console.log("[ScanScreen] camera error", event.nativeEvent)}
         />
       )}
 
