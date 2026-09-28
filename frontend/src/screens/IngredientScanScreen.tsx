@@ -114,9 +114,6 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
         <Pressable style={styles.primary} onPress={requestPermission}>
           <Text style={styles.primaryText}>İzin ver</Text>
         </Pressable>
-        <Pressable onPress={() => setStep("edit")}>
-          <Text style={styles.link}>Metni elle gir</Text>
-        </Pressable>
       </View>
     );
   }
@@ -145,12 +142,11 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
           </>
         ) : (
           <>
-            <Text style={styles.hint}>{message ?? "Ambalajdaki içerik (Ingredients) listesini çerçeveye al"}</Text>
+            <Text style={styles.hint}>
+              {message ?? "Ambalajdaki içerik (Ingredients) listesini çerçeveye al. Şişe ya da tüp yuvarlaksa, listenin tamamı görünecek şekilde düz bir yüzeye bakacak açıda tut ve ışık yansımasından kaçın."}
+            </Text>
             <Pressable style={styles.shutter} onPress={takePhoto}>
               <View style={styles.shutterInner} />
-            </Pressable>
-            <Pressable onPress={() => setStep("edit")}>
-              <Text style={styles.link}>Metni elle gir</Text>
             </Pressable>
           </>
         )}
@@ -170,7 +166,6 @@ const styles = StyleSheet.create({
   frame: { width: "88%", height: 260, borderColor: "#fff", borderWidth: 3, borderRadius: 18, opacity: 0.85 },
   bottom: { position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", gap: 14, paddingTop: 18, paddingHorizontal: 20, backgroundColor: "rgba(0,0,0,0.5)" },
   hint: { color: "#fff", fontSize: 14, textAlign: "center" },
-  link: { color: "#fff", textDecorationLine: "underline", textAlign: "center" },
   shutter: { width: 72, height: 72, borderRadius: 36, borderWidth: 4, borderColor: "#fff", alignItems: "center", justifyContent: "center" },
   shutterInner: { width: 54, height: 54, borderRadius: 27, backgroundColor: "#fff" },
   editContent: { padding: 20, gap: 14 },
