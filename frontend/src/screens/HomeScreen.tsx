@@ -8,6 +8,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../AppContext";
 import { ScoreChip, Thumb } from "../components/common";
+import { resultState } from "../ingredients";
 import { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { colors, serif, shadow } from "../theme";
 
@@ -57,8 +58,20 @@ export function HomeScreen({ navigation }: Props) {
         {hint && <Text style={styles.hint}>{hint}</Text>}
         <Pressable onPress={() => navigation.navigate("IngredientScan")} style={styles.photoLink}>
           <Ionicons name="camera-outline" size={16} color={colors.primary} />
-          <Text style={styles.photoLinkText}>Barkodu olmayan ürün? İçerik listesini fotoğrafla</Text>
+          <Text style={styles.photoLinkText}>Barkodu olmayan ürün? İçerik listesini tara</Text>
         </Pressable>
+        {__DEV__ && (
+          <Pressable onPress={() => navigation.navigate("IngredientLiveScan")} style={styles.photoLink}>
+            <Ionicons name="flask-outline" size={16} color={colors.primary} />
+            <Text style={styles.photoLinkText}>[DEV] Eski canlı tarayıcı (karşılaştırma için)</Text>
+          </Pressable>
+        )}
+        {__DEV__ && (
+          <Pressable onPress={() => navigation.navigate("OcrBench")} style={styles.photoLink}>
+            <Ionicons name="images-outline" size={16} color={colors.primary} />
+            <Text style={styles.photoLinkText}>[DEV] OCR Bench: fotoğraf topla / yerel önişleme testi</Text>
+          </Pressable>
+        )}
 
         <View style={styles.banner}>
           <Ionicons name="leaf" size={110} color={colors.primary} style={styles.bannerLeaf} />
@@ -91,7 +104,7 @@ export function HomeScreen({ navigation }: Props) {
                   {item.brands}
                 </Text>
               )}
-              <ScoreChip rating={item.cleanRating} score={item.cleanScore} />
+              <ScoreChip rating={item.cleanRating} score={item.cleanScore} listRead={!!item.product && resultState(item.product) === "SCAN_COMPLETE_ANALYSIS_BLOCKED"} />
             </Pressable>
           ))}
         </ScrollView>

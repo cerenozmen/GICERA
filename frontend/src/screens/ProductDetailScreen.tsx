@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, View
 import { lookupBarcode } from "../api";
 import { useApp } from "../AppContext";
 import { EmptyState, ScreenHeader, Thumb } from "../components/common";
-import { freeFromChecks, parseIngredients, summaryText } from "../ingredients";
+import { freeFromChecks, parseIngredients, ResultState, resultState, summaryText } from "../ingredients";
 import { RootStackParamList } from "../navigation/types";
 import { colors, ratingStyle, serif, shadow } from "../theme";
 import { FlaggedIngredient, Product, RestrictionType } from "../types";
@@ -59,7 +59,7 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
   }
 
   const favorite = isFavorite(product.barcode);
-  const analysed = !!product.ingredientsText?.trim() && product.cleanRating !== null && product.cleanScore !== null;
+  const state = resultState(product);
 
   return (
     <View style={styles.screen}>
@@ -69,7 +69,7 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
           <View style={styles.headerActions}>
             <Pressable
               hitSlop={10}
-              onPress={() => Share.share({ message: `${product.productName ?? "Ürün"} - Gicera temizlik skoru: ${product.cleanScore ?? "-"}` })}
+              onPress={() => Share.share({ message: state === "SCORE_AVAILABLE" ? `${product.productName ?? "Ürün"} - Gicera temizlik skoru: ${product.cleanScore}` : `${product.productName ?? "Ürün"} - içerik listesi: ${product.ingredientsText ?? "-"}` })}
             >
               <Ionicons name="share-outline" size={24} color={colors.text} />
             </Pressable>
@@ -88,7 +88,7 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
           <View style={{ flex: 1, gap: 4 }}>
             <Text style={styles.name}>{product.productName ?? "İsimsiz ürün"}</Text>
             {product.brands && <Text style={styles.brand}>{product.brands}</Text>}
-            <ScoreBadge product={product} analysed={analysed} />
+            <ScoreBadge product={product} state={state} />
           </View>
         </View>
 
@@ -100,7 +100,38 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
           ))}
         </View>
 
-        {!analysed ? (
+        {state === "SCAN_COMPLETE_ANALYSIS_BLOCKED" ? (
+          <>
+            {/* A list scanned whole whose analysis couldn't vouch for a score: the list, no score. */}
+            <Text style={styles.readTitle}>İçerik listesi okundu · Skor hesaplanamadı</Text>
+            <View style={styles.unavailable}>
+              <Ionicons name="information-circle-outline" size={22} color={colors.muted} />
+              <Text style={styles.unavailableText}>{blockedMessage(product)}</Text>
+            </View>
+            {!!product.rescanRoute && (
+              <ScanIngredientsButton
+                label="Tekrar tara"
+                icon="refresh-outline"
+                onPress={() =>
+                  // (The live scanner is a development screen: a release build scans with the photo flow.)
+                  navigation.replace(product.rescanRoute === "IngredientLiveScan" && __DEV__ ? "IngredientLiveScan" : "IngredientScan", {
+                    productName: product.productName ?? undefined,
+                  })
+                }
+              />
+            )}
+            {!!product.unverifiedIngredients?.length && (
+              <View style={styles.unverifiedCard}>
+                <Text style={styles.unverifiedTitle}>Doğrulanamayan içerikler</Text>
+                {product.unverifiedIngredients.map((name, i) => (
+                  <Text key={i} style={styles.unverifiedName}>{`• ${name}`}</Text>
+                ))}
+              </View>
+            )}
+            <Text style={styles.sectionTitle}>İçerik listesi</Text>
+            <IngredientList product={product} />
+          </>
+        ) : state === "NO_INGREDIENT_LIST" ? (
           <>
             <View style={styles.unavailable}>
               <Ionicons name="information-circle-outline" size={22} color={colors.muted} />
@@ -112,7 +143,18 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
           </>
         ) : (
           <>
+            {isCustom && (
+              <View style={styles.readRow}>
+                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                <Text style={styles.readTitle}>İçerik listesi okundu</Text>
+              </View>
+            )}
             {isCustom && <Text style={styles.customNote}>Bu analiz senin çektiğin içerik listesine göre yapıldı, kayıtlı bir ürün değil.</Text>}
+            {isCustom && !!product.unverifiedIngredients?.length && (
+              <Text style={styles.customNote}>
+                {`Fotoğraftan okunan ${product.unverifiedIngredients.length} içerik doğrulanamadı (${product.unverifiedIngredients.join(", ")}). Bunlar skora dahil edilmedi; hiçbiri skoru etkileyebilecek bir maddeye benzemediği için skor gösteriliyor.`}
+              </Text>
+            )}
             {tab === "Genel Bakış" && <Overview product={product} onDetail={() => navigation.navigate("IngredientAnalysis", { product })} />}
             {tab === "İçerik" && <IngredientList product={product} />}
             {tab === "Analiz" && <FlaggedList product={product} />}
@@ -123,17 +165,57 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
   );
 }
 
-function ScanIngredientsButton({ onPress }: { onPress: () => void }) {
+function ScanIngredientsButton({
+  onPress,
+  label = "İçerik listesini tara",
+  icon = "camera-outline",
+}: {
+  onPress: () => void;
+  label?: string;
+  icon?: "camera-outline" | "refresh-outline";
+}) {
   return (
     <Pressable style={styles.scanButton} onPress={onPress}>
-      <Ionicons name="camera-outline" size={20} color="#fff" />
-      <Text style={styles.scanButtonText}>İçerik listesini fotoğrafla</Text>
+      <Ionicons name={icon} size={20} color="#fff" />
+      <Text style={styles.scanButtonText}>{label}</Text>
     </Pressable>
   );
 }
 
-function ScoreBadge({ product, analysed }: { product: Product; analysed: boolean }) {
-  if (!analysed || !product.cleanRating) {
+/**
+ * Why a list read whole has no score, naming the names that withheld it: a name read unclearly could
+ * be a substance that lowers the score, so it is never guessed.
+ */
+function blockedMessage(product: Product): string {
+  const blockers = product.scoreBlockers;
+  const quote = (names: string[]) => names.map((name) => `"${name}"`).join(", ");
+  const parts: string[] = [];
+  if (blockers?.misread.length) parts.push(`${quote(blockers.misread)} net okunamadı.`);
+  if (blockers?.notInDictionary.length) parts.push(`${quote(blockers.notInDictionary)} içerik veritabanımızda bulunmuyor.`);
+  if (!blockers || !parts.length) {
+    return "İçerik listesi okundu ancak bazı içerikler güvenilir şekilde analiz edilemedi. Doğrulanamayan içerikler güvenli sayılmaz; yanlış bir skor göstermemek için skor hesaplanmadı.";
+  }
+  const many = blockers.misread.length + blockers.notInDictionary.length > 1;
+  return (
+    `${parts.join(" ")} ${many ? "Bu içerikler" : "Bu içerik"} puan düşüren bir madde olabileceği için tahmin edilmedi; yanlış bir skor göstermemek için skor hesaplanmadı.` +
+    (blockers.misread.length ? " Yazıyı ortaya getirip tekrar tarayabilirsin." : "")
+  );
+}
+
+function ScoreBadge({ product, state }: { product: Product; state: ResultState }) {
+  // A list read whole without a score is a finished scan, not a failed one.
+  if (state === "SCAN_COMPLETE_ANALYSIS_BLOCKED") {
+    return (
+      <View style={[styles.badge, { backgroundColor: "#E3F2E7" }]}>
+        <Ionicons name="list-outline" size={22} color={colors.primary} />
+        <View>
+          <Text style={[styles.badgeText, { color: colors.primary }]}>İçerik listesi okundu</Text>
+          <Text style={[styles.badgeNote, { color: colors.muted }]}>Skor hesaplanamadı</Text>
+        </View>
+      </View>
+    );
+  }
+  if (state === "NO_INGREDIENT_LIST" || !product.cleanRating) {
     return (
       <View style={[styles.badge, { backgroundColor: "#EEE" }]}>
         <Text style={[styles.badgeText, { color: colors.muted }]}>Analiz edilemedi</Text>
@@ -242,6 +324,7 @@ const styles = StyleSheet.create({
   badge: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 8, marginTop: 6 },
   badgeText: { fontWeight: "700", fontSize: 15 },
   badgeScore: { fontSize: 13, fontWeight: "600" },
+  badgeNote: { fontSize: 12 },
   tabs: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: colors.border },
   tab: { paddingVertical: 10, paddingHorizontal: 12, marginBottom: -1, borderBottomWidth: 2, borderBottomColor: "transparent" },
   tabActive: { borderBottomColor: colors.primary },
@@ -256,6 +339,12 @@ const styles = StyleSheet.create({
   detailButtonText: { color: colors.danger, fontWeight: "600" },
   unavailable: { flexDirection: "row", gap: 10, backgroundColor: "#EFEFEF", borderRadius: 16, padding: 16, alignItems: "flex-start" },
   customNote: { color: colors.muted, fontSize: 13, lineHeight: 18 },
+  readRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  readTitle: { fontWeight: "700", fontSize: 16, color: colors.text },
+  sectionTitle: { fontWeight: "700", fontSize: 15, color: colors.text },
+  unverifiedCard: { backgroundColor: colors.warningLight, borderRadius: 16, padding: 14, gap: 4 },
+  unverifiedTitle: { fontWeight: "700", fontSize: 14, color: colors.text },
+  unverifiedName: { fontSize: 14, color: colors.text },
   scanButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 13, paddingHorizontal: 22 },
   scanButtonText: { color: "#fff", fontWeight: "600", fontSize: 15 },
   unavailableText: { flex: 1, color: colors.muted, lineHeight: 20 },

@@ -104,9 +104,13 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
         ) : (
           <Text style={styles.hint}>{message ?? "Barkodu ürünün üzerine hizala"}</Text>
         )}
-        {notFound && (
+        {notFound ? (
           <Pressable style={styles.go} onPress={() => navigation.replace("IngredientScan")}>
-            <Text style={styles.goText}>İçerik listesini fotoğrafla</Text>
+            <Text style={styles.goText}>İçerik listesini tara</Text>
+          </Pressable>
+        ) : (
+          <Pressable onPress={() => navigation.replace("IngredientScan")}>
+            <Text style={styles.link}>Barkodu yok mu? İçerik listesini tara</Text>
           </Pressable>
         )}
         {manualOpen ? (

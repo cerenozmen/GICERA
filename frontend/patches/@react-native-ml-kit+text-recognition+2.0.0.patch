@@ -1,0 +1,40 @@
+diff --git a/node_modules/@react-native-ml-kit/text-recognition/android/src/main/java/com/rnmlkit/textrecognition/TextRecognitionModule.java b/node_modules/@react-native-ml-kit/text-recognition/android/src/main/java/com/rnmlkit/textrecognition/TextRecognitionModule.java
+index 004bfb3..a581aad 100644
+--- a/node_modules/@react-native-ml-kit/text-recognition/android/src/main/java/com/rnmlkit/textrecognition/TextRecognitionModule.java
++++ b/node_modules/@react-native-ml-kit/text-recognition/android/src/main/java/com/rnmlkit/textrecognition/TextRecognitionModule.java
+@@ -100,11 +100,13 @@ public class TextRecognitionModule extends ReactContextBaseJavaModule {
+ 			map.putArray("cornerPoints", cornerPointsToMap(line.getCornerPoints()));
+ 		}
+         map.putArray("recognizedLanguages", langToMap(line.getRecognizedLanguage()));
++        map.putDouble("confidence", line.getConfidence());
+ 
+         WritableArray elements = Arguments.createArray();
+         for (Text.Element element : line.getElements()) {
+             WritableMap el = Arguments.createMap();
+             el.putString("text", element.getText());
++            el.putDouble("confidence", element.getConfidence());
+             if (element.getBoundingBox() != null) {
+                 el.putMap("frame", rectToMap(element.getBoundingBox()));
+             }
+diff --git a/node_modules/@react-native-ml-kit/text-recognition/index.ts b/node_modules/@react-native-ml-kit/text-recognition/index.ts
+index 17855b0..69568d6 100644
+--- a/node_modules/@react-native-ml-kit/text-recognition/index.ts
++++ b/node_modules/@react-native-ml-kit/text-recognition/index.ts
+@@ -26,6 +26,8 @@ export interface TextElement {
+   frame?: Frame;
+   /** Corner points of the element (word) */
+   cornerPoints?: CornerPoints;
++  /** Recognition confidence, 0-1 (Android only) */
++  confidence?: number;
+ }
+ 
+ export interface TextLine {
+@@ -39,6 +41,8 @@ export interface TextLine {
+   elements: TextElement[];
+   /** Languages recognized in the line */
+   recognizedLanguages: Language[];
++  /** Recognition confidence, 0-1 (Android only) */
++  confidence?: number;
+ }
+ 
+ export interface TextBlock {

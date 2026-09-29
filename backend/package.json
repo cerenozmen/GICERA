@@ -11,7 +11,14 @@
     "typecheck": "tsc --noEmit",
     "import:obf": "ts-node-dev --transpile-only --once src/scripts/importObfBulk.ts",
     "import:cosing": "ts-node-dev --transpile-only --once src/scripts/importCosing.ts",
-    "rescore": "ts-node-dev --transpile-only --once src/scripts/rescoreProducts.ts"
+    "rescore": "node -r ts-node/register/transpile-only src/scripts/rescoreProducts.ts",
+    "test": "node --require ts-node/register/transpile-only --test src/**/*.test.ts",
+    "photo:fixture": "node -r ts-node/register/transpile-only src/scripts/photoFixture.ts",
+    "photo:compare": "node -r ts-node/register/transpile-only src/scripts/frameCompare.ts",
+    "scan:compare": "node -r ts-node/register/transpile-only src/scripts/scanCompare.ts",
+    "scan:oracle": "node -r ts-node/register/transpile-only src/scripts/scanOracle.ts",
+    "poc:photos": "node -r ts-node/register/transpile-only src/scripts/photoPoc.ts",
+    "ocr:bench": "node -r ts-node/register/transpile-only src/scripts/ocrBench.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.127.0",

@@ -17,6 +17,12 @@ export interface Product {
   cleanRating: CleanRating | null;
   pregnancySafe: boolean | null;
   flaggedIngredients: FlaggedIngredient[];
+  /** Photo analyses only: names that couldn't be verified; left out of the score, never counted as safe. */
+  unverifiedIngredients?: string[];
+  /** Scanned lists without a score: the names that withheld it (see scoreBlockers). */
+  scoreBlockers?: { misread: string[]; notInDictionary: string[] };
+  /** Scanned lists: the scanner that read it, to scan again with ("Tekrar tara"). */
+  rescanRoute?: "IngredientScan" | "IngredientLiveScan";
 }
 
 export type LookupResult =

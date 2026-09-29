@@ -5,6 +5,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProductSnapshot } from "../storage";
 import { colors, ratingStyle, serif, shadow } from "../theme";
+import { resultState } from "../ingredients";
 import { CleanRating } from "../types";
 
 export function Thumb({ uri, size = 56 }: { uri: string | null; size?: number }) {
@@ -18,7 +19,15 @@ export function Thumb({ uri, size = 56 }: { uri: string | null; size?: number })
   );
 }
 
-export function ScoreChip({ rating, score }: { rating: CleanRating | null; score: number | null }) {
+/** `listRead`: an own scan whose list was read whole but got no score (a finished scan, not a failed one). */
+export function ScoreChip({ rating, score, listRead }: { rating: CleanRating | null; score: number | null; listRead?: boolean }) {
+  if ((!rating || score === null) && listRead) {
+    return (
+      <View style={[styles.chip, { backgroundColor: "#E3F2E7" }]}>
+        <Text style={[styles.chipText, { color: colors.primary }]}>Liste okundu · skor yok</Text>
+      </View>
+    );
+  }
   if (!rating || score === null) {
     return (
       <View style={[styles.chip, { backgroundColor: "#EEE" }]}>
@@ -68,7 +77,7 @@ export function ProductRow({ item, onPress }: { item: ProductSnapshot; onPress: 
           </Text>
         )}
         <View style={{ flexDirection: "row" }}>
-          <ScoreChip rating={item.cleanRating} score={item.cleanScore} />
+          <ScoreChip rating={item.cleanRating} score={item.cleanScore} listRead={!!item.product && resultState(item.product) === "SCAN_COMPLETE_ANALYSIS_BLOCKED"} />
         </View>
       </View>
       <Ionicons name="chevron-forward" size={20} color={colors.muted} />

@@ -3,6 +3,7 @@ import express from "express";
 import { env } from "./config/env";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { apiRouter } from "./routes";
+import { loadIngredientInventory } from "./services/ingredientInventoryCache";
 import { loadRestrictedSubstances } from "./services/restrictedSubstancesCache";
 
 const app = express();
@@ -22,7 +23,7 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 async function start(): Promise<void> {
-  await loadRestrictedSubstances();
+  await Promise.all([loadRestrictedSubstances(), loadIngredientInventory()]);
   app.listen(env.port, () => {
     console.log(`GICERA backend listening on port ${env.port}`);
   });

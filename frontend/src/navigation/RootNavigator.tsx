@@ -1,7 +1,9 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useApp } from "../AppContext";
 import { IngredientAnalysisScreen } from "../screens/IngredientAnalysisScreen";
+import { GuidedScanScreen } from "../screens/GuidedScanScreen";
 import { IngredientScanScreen } from "../screens/IngredientScanScreen";
+import { OcrBenchScreen } from "../screens/OcrBenchScreen";
 import { PregnancyModeScreen } from "../screens/PregnancyModeScreen";
 import { ProductDetailScreen } from "../screens/ProductDetailScreen";
 import { ScanScreen } from "../screens/ScanScreen";
@@ -21,7 +23,9 @@ export function RootNavigator() {
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <Stack.Screen name="IngredientAnalysis" component={IngredientAnalysisScreen} />
       <Stack.Screen name="PregnancyMode" component={PregnancyModeScreen} />
-      <Stack.Screen name="IngredientScan" component={IngredientScanScreen} />
+      <Stack.Screen name="IngredientScan" component={GuidedScanScreen} />
+      {__DEV__ && <Stack.Screen name="IngredientLiveScan" component={IngredientScanScreen} />}
+      {__DEV__ && <Stack.Screen name="OcrBench" component={OcrBenchScreen} />}
     </Stack.Navigator>
   );
 }

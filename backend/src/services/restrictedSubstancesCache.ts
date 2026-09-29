@@ -82,13 +82,14 @@ export async function loadRestrictedSubstances(): Promise<void> {
   aliasIndex = new Map();
   const rows = await fetchAllRestrictedSubstances();
 
-  for (const row of rows) {
-    const entry: RestrictedSubstanceEntry = {
-      inciName: row.inci_name,
-      restrictionType: row.restriction_type,
-      notes: row.notes,
-    };
-    addEntry(row.inci_name, entry);
+  const entries = rows.map((row) => ({
+    row,
+    entry: { inciName: row.inci_name, restrictionType: row.restriction_type, notes: row.notes } as RestrictedSubstanceEntry,
+  }));
+  // Every substance's own name first: CosIng rows share aliases (its CI 77489 row lists "CI 77491" and
+  // "CI 77499"), and an equally severe alias must not take a name from the row that is that substance.
+  for (const { row, entry } of entries) addEntry(row.inci_name, entry);
+  for (const { row, entry } of entries) {
     for (const alias of row.aliases ?? []) {
       addEntry(alias, entry);
     }

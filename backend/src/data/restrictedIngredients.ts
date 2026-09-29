@@ -22,7 +22,9 @@ export const restrictedIngredientSeed: RestrictedIngredientSeed[] = [
   },
   {
     inciName: "salicylic acid",
-    aliases: ["salicylic acid", "bha"],
+    // Not "bha": skincare marketing uses "BHA" for beta hydroxy acid, but on an ingredient list "BHA"
+    // is its own INCI name, butylated hydroxyanisole (CosIng: CAS 25013-16-5, antioxidant).
+    aliases: ["salicylic acid"],
     restrictionType: "pregnancy_unsafe",
     notes: "Yüksek konsantrasyonlarda (durulanmayan ürünlerde) hamilelikte kaçınılması önerilir.",
   },

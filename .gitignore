@@ -36,3 +36,7 @@ coverage/
 database/data-dumps/
 *.csv
 *.jsonl
+
+# Local data written by backend scripts (npm run rescore backups, npm run photo:fixture captures)
+backend/backups/
+backend/captures/
