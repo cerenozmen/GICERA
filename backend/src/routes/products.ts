@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { lookupProductByBarcode } from "../services/productService";
+import { lookupProductByBarcode, searchProducts } from "../services/productService";
 import { asyncHandler } from "../utils/asyncHandler";
 
 const barcodeSchema = z
@@ -9,6 +9,15 @@ const barcodeSchema = z
   .regex(/^\d{8,14}$/, "Barkod 8-14 haneli rakamlardan oluşmalıdır.");
 
 export const productsRouter = Router();
+
+// GET /api/products/search?q=  (name or brand; declared before /:barcode)
+productsRouter.get(
+  "/search",
+  asyncHandler(async (req, res) => {
+    const q = typeof req.query.q === "string" ? req.query.q.slice(0, 200) : "";
+    res.json({ products: await searchProducts(q) });
+  })
+);
 
 // GET /api/products/:barcode
 productsRouter.get(

@@ -3,12 +3,13 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useRef, useState } from "react";
 import TextRecognition, { TextRecognitionResult } from "@react-native-ml-kit/text-recognition";
 import { orientedSize, toScanFrame } from "../guidedScan";
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import RNFS from "react-native-fs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera, useCameraDevice, useCameraPermission } from "react-native-vision-camera";
 import { AnalysisResult, analyzeScan, scoreBlockers } from "../api";
 import { useApp } from "../AppContext";
+import { BackButton } from "../components/common";
 import { joinLines, normalizeListItems } from "../ingredients";
 import { addFrame, candidates, createScan, readyToCheck, FrameReading, FrameReport, progressLevel, readSection, ScanLine, ScanPhase, ScanState } from "../ingredientScanner";
 import { RootStackParamList } from "../navigation/types";
@@ -16,8 +17,7 @@ import { colors } from "../theme";
 import { Product } from "../types";
 
 /*
- * Development only (IngredientLiveScan): the former continuous live scanner, no longer the app's flow
- * (GuidedScanScreen is), kept to compare with. The ingredient scanner (see ingredientScanner.ts): the camera runs, snapshots are read continuously,
+ * The ingredient list scan (route IngredientScan). The ingredient scanner (see ingredientScanner.ts): the camera runs, snapshots are read continuously,
  * and the scan ends by itself once the whole list has been read and analysed, or once it stops
  * getting anywhere. When a snapshot shows the whole list, one high-resolution photo of the same view
  * is taken and read as well (small print reads better at full resolution); development builds log
@@ -118,7 +118,7 @@ const newPanel = (session: string): DevPanel => ({
 /** The list the scanner has rebuilt so far, as items. */
 const liveItems = (scan: ScanState) => normalizeListItems(joinLines(scan.rows));
 
-export function IngredientScanScreen({ navigation, route }: NativeStackScreenProps<RootStackParamList, "IngredientLiveScan">) {
+export function IngredientScanScreen({ navigation, route }: NativeStackScreenProps<RootStackParamList, "IngredientScan">) {
   const insets = useSafeAreaInsets();
   const { recordScan } = useApp();
   const { hasPermission, requestPermission } = useCameraPermission();
@@ -129,9 +129,6 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
   const [phase, setPhase] = useState<ScanPhase | null>(null);
   const [hint, setHint] = useState(MESSAGES.show);
   const [failure, setFailure] = useState<string | null>(null);
-  const [debug, setDebug] = useState("");
-  const [panel, setPanel] = useState<DevPanel | null>(null);
-  const [panelOpen, setPanelOpen] = useState(true);
   const scanning = useRef(false);
 
   // Leaving the screen ends a running scan.
@@ -179,11 +176,12 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
       flaggedIngredients: result.reliable ? result.flaggedIngredients : [],
       unverifiedIngredients: result.ingredients.filter((item) => item.status === "unknown").map((item) => item.text),
       scoreBlockers: result.reliable ? undefined : scoreBlockers(result.ingredients),
-      rescanRoute: "IngredientLiveScan",
+      rescanRoute: "IngredientScan",
     };
     recordScan(product);
     onNavigate?.(`ProductDetail, ${result.reliable ? `score ${result.cleanScore}` : "no score"}, ${result.ingredients.length} ingredients`);
-    navigation.replace("ProductDetail", { barcode: id, product });
+    // The list read first ("Ürün içeriği okundu"), then its result.
+    navigation.replace("IngredientAnalysis", { product, fromScan: true });
   }
 
   async function runScan() {
@@ -219,7 +217,6 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
     const show = (patch: Partial<DevPanel> = {}) => {
       if (!__DEV__) return;
       Object.assign(dev, patch);
-      setPanel({ ...dev, changes: [...dev.changes], highRes: { ...dev.highRes } });
     };
     /** What the server was sent and what it returned, for the log and the panel. */
     const exchange = async (candidate: ReturnType<typeof candidates>[number], label: string) => {
@@ -528,7 +525,6 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
           enter("READING");
           setHint(stalled > HINT_AFTER_MS ? MESSAGES.closer : MESSAGES.reading);
         }
-        if (__DEV__) setDebug(`${current} · ${lastFailure || section?.missing.join("; ") || lastReading.reason || "-"}`);
 
         // Looking for clean reads of misread names: high-resolution photos (small print reads better
         // there), until the time is up; then the whole list held is shown.
@@ -592,11 +588,19 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
       {device && cameraReady && <Camera ref={camera} style={StyleSheet.absoluteFill} device={device} isActive={!failure && !done} photo />}
 
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={28} color="#fff" />
-        </Pressable>
-        <Text style={styles.title}>İçerik Listesini Tara</Text>
-        <View style={{ width: 28 }} />
+        <View style={styles.topRow}>
+          <BackButton dark onPress={() => navigation.goBack()} />
+          <Text style={styles.title}>İçerik listesi tara</Text>
+          <View style={styles.topSide} />
+        </View>
+        <View style={styles.segment}>
+          <Pressable style={styles.segmentItem} onPress={() => navigation.replace("Scan")}>
+            <Text style={styles.segmentText}>Barkod</Text>
+          </Pressable>
+          <View style={[styles.segmentItem, styles.segmentOn]}>
+            <Text style={[styles.segmentText, styles.segmentTextOn]}>İçerik listesi</Text>
+          </View>
+        </View>
       </View>
 
       <View style={styles.frameWrap} pointerEvents="none">
@@ -613,37 +617,6 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
           {!done && phase !== null && <ActivityIndicator color="#fff" />}
           <Text style={styles.hint}>{done ? MESSAGES.done : hint}</Text>
         </View>
-        {__DEV__ && !!debug && !done && <Text style={styles.debug}>{debug}</Text>}
-        {__DEV__ && panel && (
-          // Development only: what the scanner holds right now.
-          <View style={styles.panel}>
-            <Pressable onPress={() => setPanelOpen((open) => !open)}>
-              <Text style={styles.panelTitle}>{`DEBUG ${panel.session} ${panelOpen ? "▾" : "▸"}`}</Text>
-            </Pressable>
-            {panelOpen && (
-              <ScrollView style={styles.panelScroll}>
-                <Text style={styles.panelText}>
-                  {[
-                    `Frames: ${panel.frames}   OCR lines: ${panel.ocrLines}   Ingredient section: ${panel.section ? "YES" : "NO"}`,
-                    `Observed fragments: ${panel.fragments}   Reconstructed rows: ${panel.rows}   Reconstructed ingredients: ${panel.ingredients}`,
-                    `Start evidence: ${panel.start ? "YES" : "NO"}   End evidence: ${panel.end ? "YES" : "NO"}`,
-                    `Completeness: ${panel.scanStatus === "COMPLETE" ? "PASS" : panel.scanStatus === "-" ? "-" : "FAIL"}   Scan status: ${panel.scanStatus}   Analysis status: ${panel.analysisStatus}`,
-                    `Last useful frame: ${panel.lastUsefulS ?? "-"}s   Last reject reason: ${panel.lastReject}`,
-                    `High-res requested: ${panel.highRes.requested ? "YES" : "NO"}   captured: ${panel.highRes.captured === null ? "-" : panel.highRes.captured ? "YES" : "NO"}   OCR lines: ${panel.highRes.lines ?? "-"}   ingredients: ${panel.highRes.ingredients ?? "-"}`,
-                  ].join("\n")}
-                </Text>
-                <Text style={styles.panelHead}>FRAMES</Text>
-                <Text style={styles.panelText}>{panel.changes.join("\n")}</Text>
-                <Text style={styles.panelHead}>LIVE RECONSTRUCTED TEXT</Text>
-                <Text style={styles.panelText}>{panel.liveText || "-"}</Text>
-                {!!panel.sent && <Text style={styles.panelHead}>FINAL INGREDIENT LIST SENT TO SERVER</Text>}
-                {!!panel.sent && <Text style={styles.panelText}>{panel.sent}</Text>}
-                {!!panel.returned && <Text style={styles.panelHead}>SERVER RETURNED</Text>}
-                {!!panel.returned && <Text style={styles.panelText}>{panel.returned}</Text>}
-              </ScrollView>
-            )}
-          </View>
-        )}
         {!done && (
           <Pressable onPress={() => navigation.goBack()}>
             <Text style={styles.link}>Vazgeç</Text>
@@ -658,7 +631,6 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
           <Pressable
             style={styles.primary}
             onPress={() => {
-              setDebug("");
               setFailure(null);
               setPhase(null);
             }}
@@ -676,30 +648,31 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
 
 const CORNER = 28;
 const styles = StyleSheet.create({
-  dark: { flex: 1, backgroundColor: "#111" },
+  dark: { flex: 1, backgroundColor: colors.scanBg },
   center: { alignItems: "center", justifyContent: "center", gap: 14, padding: 24 },
   centerText: { color: "#fff", fontSize: 16, textAlign: "center", lineHeight: 22 },
   overlay: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.75)" },
-  topBar: { position: "absolute", top: 0, left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 12, backgroundColor: "rgba(0,0,0,0.35)" },
+  topBar: { position: "absolute", top: 0, left: 0, right: 0, gap: 12, paddingHorizontal: 16, paddingBottom: 12, backgroundColor: "rgba(30,42,36,0.85)" },
+  topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  topSide: { width: 40 },
+  segment: { flexDirection: "row", alignSelf: "center", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 12, padding: 4 },
+  segmentItem: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 9 },
+  segmentOn: { backgroundColor: "#fff" },
+  segmentText: { color: "#fff", fontSize: 14 },
+  segmentTextOn: { color: colors.text, fontWeight: "600" },
   title: { color: "#fff", fontSize: 17, fontWeight: "600" },
   frameWrap: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", paddingBottom: 90 },
   frame: { width: "88%", height: "45%" },
-  corner: { position: "absolute", width: CORNER, height: CORNER, borderColor: "#fff" },
+  corner: { position: "absolute", width: CORNER, height: CORNER, borderColor: colors.accent },
   cornerDone: { borderColor: "#3DDC84" },
   tl: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 14 },
   tr: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 14 },
   bl: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 14 },
   br: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 14 },
-  bottom: { position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", gap: 10, paddingTop: 18, paddingHorizontal: 20, backgroundColor: "rgba(0,0,0,0.5)" },
+  bottom: { position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", gap: 10, paddingTop: 18, paddingHorizontal: 20, backgroundColor: "rgba(30,42,36,0.85)" },
   status: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 24 },
   hint: { color: "#fff", fontSize: 15, fontWeight: "600", textAlign: "center", flexShrink: 1 },
   link: { color: "#fff", textDecorationLine: "underline", textAlign: "center" },
-  primary: { backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 15, paddingHorizontal: 28, alignItems: "center" },
+  primary: { backgroundColor: colors.accent, borderRadius: 999, paddingVertical: 15, paddingHorizontal: 28, alignItems: "center" },
   primaryText: { color: "#fff", fontWeight: "600", fontSize: 16 },
-  debug: { color: "#FFD54F", fontSize: 11, textAlign: "center", fontFamily: "monospace" },
-  panel: { alignSelf: "stretch", backgroundColor: "rgba(0,0,0,0.8)", borderRadius: 8, padding: 6 },
-  panelScroll: { maxHeight: 260 },
-  panelTitle: { color: "#FFD54F", fontSize: 11, fontFamily: "monospace", fontWeight: "700" },
-  panelHead: { color: "#4FC3F7", fontSize: 10, fontFamily: "monospace", fontWeight: "700", marginTop: 4 },
-  panelText: { color: "#E0E0E0", fontSize: 10, fontFamily: "monospace" },
 });

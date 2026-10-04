@@ -40,9 +40,9 @@ describe("label spellings of inventory names", () => {
 });
 
 describe("unknown hydrates judged by their substance", () => {
-  it("takes a misread substance of a hydrate for a harmless one-letter misread, not for garbage", () => {
+  it("takes a misread substance of a hydrate for its one-letter-off harmless name, not for garbage", () => {
     const [item] = analyze("Magnesiumn Sulfate Heptahydrate").ingredients;
-    assert.deepEqual([item.status, item.kind, item.nearest, item.distance], ["unknown", "resembles_safe", "magnesium sulfate", 1]);
+    assert.deepEqual([item.status, item.matchedName, item.corrected], ["matched", "magnesium sulfate", true]);
   });
 
   it("still takes a misread flagged hydrate for a possible flagged one", () => {

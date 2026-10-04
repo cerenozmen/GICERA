@@ -217,3 +217,19 @@ describe("oracle gate: scans whose text was all observed are rebuilt whole", () 
     if (result.complete) assert.ok(lost(JAR, result.read).length <= 1, lost(JAR, result.read).join(", "));
   });
 });
+
+describe("a word the label split across rows, read with one letter too many", () => {
+  const v = buildVocabulary(["Aqua", "C12-15 Alkyl Benzoate", "Octyl Methoxycinnamate", "Hydrogenated Polydecene", "Glutathione", "Sucrose"], []);
+  const w = buildWordSet(v);
+  const breaks = (rows: string[]) => checkListBoundaries(rows, true, v, w).checks.filter((c) => c.kind === "break");
+
+  it('accepts "OCTYL METHOXYL" / "CINNAMATE" (a real sunscreen: the hyphen read as "L")', () => {
+    const [b] = breaks(["Aqua, C12-15 Alkyl Benzoate, OCTYL METHOXYL", "CINNAMATE, Hydrogenated Polydecene."]);
+    assert.equal(b.verified, true);
+  });
+
+  it("still refuses a cut piece joined to the next row with a letter lost at the cut", () => {
+    const [b] = breaks(["Aqua, Glutathi", "ne, Sucrose."]);
+    assert.equal(b.verified, false);
+  });
+});

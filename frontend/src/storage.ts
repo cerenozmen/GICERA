@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { RoutineProduct } from "./routine";
 import { Product } from "./types";
 
 export interface ProductSnapshot {
@@ -18,6 +19,34 @@ export interface Settings {
   showNotes: boolean;
 }
 
+export interface SkinProfile {
+  skinType: string | null;
+  concerns: string[];
+  reactionFrequency: string | null;
+  sunBurns: string | null;
+  ageRange: string | null;
+  routineLevel: string | null;
+  pregnant: string | null;
+  skinCondition: string | null;
+}
+
+export const EMPTY_PROFILE: SkinProfile = {
+  skinType: null,
+  concerns: [],
+  reactionFrequency: null,
+  sunBurns: null,
+  ageRange: null,
+  routineLevel: null,
+  pregnant: null,
+  skinCondition: null,
+};
+
+/** Today's ticked routine steps: the date they belong to, so they reset each day. */
+export interface RoutineChecks {
+  date: string;
+  done: string[];
+}
+
 export const DEFAULT_SETTINGS: Settings = { pregnancyMode: true, highlightRisky: true, showNotes: true };
 
 const KEYS = {
@@ -25,6 +54,12 @@ const KEYS = {
   history: "gicera.history",
   settings: "gicera.settings",
   welcomeSeen: "gicera.welcomeSeen",
+  skinProfile: "gicera.skinProfile",
+  routine: "gicera.routine",
+  nickname: "gicera.nickname",
+  notificationsSeen: "gicera.notificationsSeen",
+  routineProducts: "gicera.routineProducts",
+  forumDevice: "gicera.forumDevice",
 };
 
 async function read<T>(key: string, fallback: T): Promise<T> {
@@ -53,6 +88,18 @@ export const storage = {
   saveSettings: (value: Settings) => write(KEYS.settings, value),
   loadWelcomeSeen: () => read<boolean>(KEYS.welcomeSeen, false),
   saveWelcomeSeen: () => write(KEYS.welcomeSeen, true),
+  loadSkinProfile: () => read<SkinProfile | null>(KEYS.skinProfile, null),
+  saveSkinProfile: (value: SkinProfile) => write(KEYS.skinProfile, value),
+  loadRoutine: () => read<RoutineChecks>(KEYS.routine, { date: "", done: [] }),
+  saveRoutine: (value: RoutineChecks) => write(KEYS.routine, value),
+  loadRoutineProducts: () => read<Record<string, RoutineProduct>>(KEYS.routineProducts, {}),
+  saveRoutineProducts: (value: Record<string, RoutineProduct>) => write(KEYS.routineProducts, value),
+  loadNotificationsSeen: () => read<string>(KEYS.notificationsSeen, ""),
+  saveNotificationsSeen: (value: string) => write(KEYS.notificationsSeen, value),
+  loadNickname: () => read<string | null>(KEYS.nickname, null),
+  saveNickname: (value: string) => write(KEYS.nickname, value),
+  loadForumDevice: () => read<string | null>(KEYS.forumDevice, null),
+  saveForumDevice: (value: string) => write(KEYS.forumDevice, value),
 };
 
 export function toSnapshot(product: Product): ProductSnapshot {

@@ -1,3 +1,4 @@
+import { COMMON_NAMES } from "../data/commonNames";
 import { SUPPLEMENTARY_INCI } from "../data/supplementaryInci";
 import { supabase } from "../db/supabaseClient";
 import { buildVocabulary, IngredientVocabulary } from "./ingredientCoverage";
@@ -40,9 +41,9 @@ export async function loadIngredientInventory(): Promise<void> {
   }
 }
 
-/** Null until the inventory is loaded (and non-empty); combines it with the hand-kept names CosIng lacks and the restricted aliases. */
+/** Null until the inventory is loaded (and non-empty); combines it with the hand-kept names CosIng lacks, the restricted aliases and the common names. */
 export function getIngredientVocabulary(): IngredientVocabulary | null {
   if (inventoryNames.length === 0) return null;
-  vocabulary ??= buildVocabulary([...inventoryNames, ...SUPPLEMENTARY_INCI], getRestrictedSubstanceAliasIndex().keys());
+  vocabulary ??= buildVocabulary([...inventoryNames, ...SUPPLEMENTARY_INCI], getRestrictedSubstanceAliasIndex().keys(), COMMON_NAMES);
   return vocabulary;
 }

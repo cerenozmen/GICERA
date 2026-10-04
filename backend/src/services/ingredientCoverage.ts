@@ -37,6 +37,8 @@ export interface IngredientAssessment {
   /** Unknown: edits between the read text and `nearest`. */
   distance?: number;
   suspected?: SuspectedOcrError;
+  /** Matched: read one letter off a single harmless name and taken as that name (see oneLetterMisread). */
+  corrected?: boolean;
 }
 
 /** frame_conflict: multi-frame reading only (see frameMerge.ts). */
@@ -85,8 +87,16 @@ export function inciKey(name: string): string {
     .replace(/^cl(?=\d{5}$)/, "ci");
 }
 
-/** Builds lookup maps from inventory names and flagged aliases; flagged spellings take precedence. */
-export function buildVocabulary(inventoryNames: Iterable<string>, flaggedNames: Iterable<string>): IngredientVocabulary {
+/**
+ * Builds lookup maps from inventory names and flagged aliases; flagged spellings take precedence.
+ * A common name ("Vitamin E", see data/commonNames.ts) is known as the INCI name it stands for: it
+ * is matched as that name, so scored as it, and flagged when that name is.
+ */
+export function buildVocabulary(
+  inventoryNames: Iterable<string>,
+  flaggedNames: Iterable<string>,
+  commonNames: Readonly<Record<string, string>> = {}
+): IngredientVocabulary {
   const known = new Map<string, string>();
   const flagged = new Set<string>();
   const display = (name: string) => name.trim().toLowerCase().replace(/\s+/g, " ");
@@ -99,6 +109,13 @@ export function buildVocabulary(inventoryNames: Iterable<string>, flaggedNames: 
   for (const name of inventoryNames) {
     const key = inciKey(name);
     if (key && !known.has(key)) known.set(key, display(name));
+  }
+  for (const [common, inci] of Object.entries(commonNames)) {
+    const key = inciKey(common);
+    const target = known.get(inciKey(inci));
+    if (!key || target === undefined) continue;
+    known.set(key, target);
+    if (flagged.has(inciKey(inci))) flagged.add(key);
   }
   return { known, flagged };
 }
@@ -135,7 +152,7 @@ export function boundedDistance(a: string, b: string, max: number): number {
   return previous[b.length];
 }
 
-type Classification = { kind: UnknownKind; nearest?: string; distance?: number };
+type Classification = { kind: UnknownKind; nearest?: string; distance?: number; /** Another harmless name is as close as `nearest`. */ tied?: boolean };
 /**
  * Per vocabulary, each key's classification: it compares the key with every known name (24,000+), and
  * a scan asks about the same misread in every photo's evidence. Same key, same answer.
@@ -165,6 +182,7 @@ function classify(key: string, vocabulary: IngredientVocabulary): Classification
 
   let nearestFlagged: { name: string; distance: number } | null = null;
   let nearestSafe: { name: string; distance: number } | null = null;
+  let tied = false;
   for (const [candidate, name] of vocabulary.known) {
     const distance = boundedDistance(key, candidate, flaggedTolerance);
     if (distance > flaggedTolerance) continue;
@@ -172,6 +190,9 @@ function classify(key: string, vocabulary: IngredientVocabulary): Classification
       if (!nearestFlagged || distance < nearestFlagged.distance) nearestFlagged = { name, distance };
     } else if (!nearestSafe || distance < nearestSafe.distance) {
       nearestSafe = { name, distance };
+      tied = false;
+    } else if (distance === nearestSafe.distance && name !== nearestSafe.name) {
+      tied = true;
     }
   }
 
@@ -182,7 +203,7 @@ function classify(key: string, vocabulary: IngredientVocabulary): Classification
     return { kind: "resembles_flagged", nearest: nearestFlagged.name, distance: nearestFlagged.distance };
   }
   if (nearestSafe && nearestSafe.distance <= safeTolerance) {
-    return { kind: "resembles_safe", nearest: nearestSafe.name, distance: nearestSafe.distance };
+    return { kind: "resembles_safe", nearest: nearestSafe.name, distance: nearestSafe.distance, tied };
   }
   return { kind: "unrecognizable" };
 }
@@ -381,6 +402,16 @@ function splitMergedToken(text: string, vocabulary: IngredientVocabulary): strin
  * `confirmed`: keys of unknowns read identically in two or more frames (see frameMerge.ts); an
  * unrecognisable one among them is "unlisted" and doesn't withhold the score.
  */
+/**
+ * A name read one letter off exactly one harmless name, with no flagged name near it ("Frutose" is
+ * fructose, "BIS-Digyceryl Polyacyladipate-2" is bis-diglyceryl polyacyladipate-2): taken as that
+ * name. Whatever it really is, it carries no penalty (resembles_safe), so the score is the same; it is
+ * only no longer listed as unverified. Ties and wider misreads stay unknown.
+ */
+function oneLetterMisread(classification: Classification): string | undefined {
+  return classification.kind === "resembles_safe" && classification.distance === 1 && !classification.tied ? classification.nearest : undefined;
+}
+
 export function analyzePhotoIngredients(
   tokens: string[],
   vocabulary: IngredientVocabulary,
@@ -395,8 +426,14 @@ export function analyzePhotoIngredients(
       ingredients.push({ text, status: "matched", matchedName, contribution: 100 - score([matchedName]).cleanScore });
     } else {
       const classification = classifyHydrate(text, vocabulary) ?? classifyUnknown(key, vocabulary);
+      const corrected = oneLetterMisread(classification);
+      if (corrected !== undefined) {
+        ingredients.push({ text, status: "matched", matchedName: corrected, contribution: 100 - score([corrected]).cleanScore, corrected: true });
+        return;
+      }
       if (classification.kind === "unrecognizable" && (confirmed.has(key) || looksUnlisted(text, vocabulary))) classification.kind = "unlisted";
-      ingredients.push({ text, status: "unknown", ...classification, suspected: suspectedOcrError(text) });
+      const { kind, nearest, distance } = classification;
+      ingredients.push({ text, status: "unknown", kind, nearest, distance, suspected: suspectedOcrError(text) });
     }
   };
   for (const token of tokens) {

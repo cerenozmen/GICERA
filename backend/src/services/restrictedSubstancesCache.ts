@@ -1,4 +1,5 @@
 import { supabase } from "../db/supabaseClient";
+import { COMMON_NAMES } from "../data/commonNames";
 import { restrictedIngredientSeed } from "../data/restrictedIngredients";
 import { RestrictionType } from "../types/product";
 
@@ -104,6 +105,11 @@ export async function loadRestrictedSubstances(): Promise<void> {
     for (const alias of seedEntry.aliases) {
       addEntry(alias, entry);
     }
+  }
+
+  // A common name carries the flags of the INCI name it stands for ("Vitamin A" is retinol).
+  for (const [common, inci] of Object.entries(COMMON_NAMES)) {
+    for (const entry of aliasIndex.get(normalize(inci)) ?? []) addEntry(common, entry);
   }
 
   loaded = true;

@@ -1,89 +1,88 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { EmptyState, ScreenHeader } from "../components/common";
-import { parseIngredients } from "../ingredients";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BackButton, PrimaryButton, Tag } from "../components/common";
+import { ingredientRoles } from "../ingredientInfo";
+import { lowerTr, parseIngredients } from "../ingredients";
 import { RootStackParamList } from "../navigation/types";
-import { colors, shadow } from "../theme";
-import { FlaggedCard } from "./ProductDetailScreen";
+import { colors, serif } from "../theme";
+
+const PREVIEW = 5;
 
 export function IngredientAnalysisScreen({ navigation, route }: NativeStackScreenProps<RootStackParamList, "IngredientAnalysis">) {
-  const { product } = route.params;
+  const insets = useSafeAreaInsets();
+  const { product, fromScan } = route.params;
   const tokens = parseIngredients(product.ingredientsText);
-  const flagged = product.flaggedIngredients;
-  const [tab, setTab] = useState<"all" | "flagged">("all");
+  const flaggedNames = new Set(product.flaggedIngredients.map((f) => lowerTr(f.inciName)));
+  const [expanded, setExpanded] = useState(tokens.length <= PREVIEW + 1);
+  const shown = expanded ? tokens : tokens.slice(0, PREVIEW);
 
-  function showSources() {
-    Alert.alert(
-      "Skorlama nasıl yapılıyor?",
-      "İçerikler, AB Kozmetik Tüzüğü'nün resmi madde veritabanı CosIng ile karşılaştırılır: yasaklı maddeler (Ek II) skoru en çok düşürür, kısıtlı maddeler (Ek III) orta, düzenlemeye tabi renklendirici/koruyucu/UV filtreleri ve tartışmalı maddeler az düşürür. Hamilelik uyarıları ayrıca derlenmiş bir listeden gelir ve tıbbi tavsiye yerine geçmez.\n\nÜrün bilgileri Open Beauty Facts topluluğundan alınır."
-    );
+  function showResults() {
+    if (fromScan) navigation.replace("ProductDetail", { barcode: product.barcode, product });
+    else navigation.goBack();
   }
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader title="İçerik Analizi" onBack={() => navigation.goBack()} />
-      <View style={styles.pills}>
-        <Pill label={`Tüm İçerikler (${tokens.length})`} active={tab === "all"} onPress={() => setTab("all")} />
-        <Pill label={`Dikkat Edilmesi Gerekenler (${flagged.length})`} active={tab === "flagged"} onPress={() => setTab("flagged")} />
+      <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
+        <BackButton onPress={() => navigation.goBack()} />
+        <View style={styles.basket}>
+          <Ionicons name="basket-outline" size={34} color="#C9C2B8" />
+          <Ionicons name="leaf" size={14} color="#8FB59A" style={styles.basketLeaf} />
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {tab === "all" ? (
-          <View style={styles.listCard}>
-            {tokens.map((t, i) => (
-              <View key={i} style={[styles.row, i > 0 && styles.divider]}>
-                <View style={styles.dot} />
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 110 + insets.bottom }]}>
+        <Text style={styles.title}>{fromScan ? "Ürün içeriği okundu" : "Ürün içeriği"}</Text>
+        <Text style={styles.sub}>İçerikler analiz edildi. Sana en doğru sonuçları sunmak için değerlendirdik.</Text>
+
+        <View style={styles.list}>
+          {shown.map((t, i) => {
+            const roles = ingredientRoles(t);
+            const flagged = flaggedNames.has(lowerTr(t));
+            return (
+              <View key={i} style={styles.row}>
                 <Text style={styles.name}>{t}</Text>
+                <View style={styles.tags}>
+                  {flagged && <Tag label="Dikkat" tone="orange" />}
+                  {roles.slice(0, 2).map((r) => (
+                    <Tag key={r} label={r} />
+                  ))}
+                </View>
               </View>
-            ))}
-          </View>
-        ) : flagged.length === 0 ? (
-          <EmptyState icon="checkmark-circle-outline" title="Dikkat gerektiren içerik yok" text="Bu üründe işaretlenmiş bir madde bulunmuyor." />
-        ) : (
-          <View style={{ gap: 10 }}>
-            {flagged.map((item, i) => (
-              <FlaggedCard key={i} item={item} />
-            ))}
-          </View>
-        )}
-
-        <Pressable style={styles.info} onPress={showSources}>
-          <Ionicons name="document-text-outline" size={24} color={colors.danger} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.infoTitle}>Bu içerikler ne anlama geliyor?</Text>
-            <Text style={styles.infoText}>İçerik analizinde kullandığımız kaynakları ve skorlama kriterlerini incele</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-        </Pressable>
+            );
+          })}
+          {!expanded && (
+            <Pressable style={[styles.row, styles.more]} onPress={() => setExpanded(true)}>
+              <Text style={styles.moreText}>{`Tüm içerikleri göster (${tokens.length})`}</Text>
+              <Ionicons name="chevron-down" size={18} color={colors.text} />
+            </Pressable>
+          )}
+        </View>
       </ScrollView>
-    </View>
-  );
-}
 
-function Pill({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={[styles.pill, active && styles.pillActive]}>
-      <Text style={[styles.pillText, active && styles.pillTextActive]}>{label}</Text>
-    </Pressable>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+        <PrimaryButton label={fromScan ? "Analiz Sonuçlarını Göster" : "Analiz Sonuçlarına Dön"} onPress={showResults} />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  pills: { flexDirection: "row", gap: 8, paddingHorizontal: 20, paddingVertical: 8, flexWrap: "wrap" },
-  pill: { backgroundColor: colors.card, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
-  pillActive: { backgroundColor: colors.primary },
-  pillText: { fontSize: 13, color: colors.text },
-  pillTextActive: { color: "#fff", fontWeight: "600" },
-  content: { padding: 20, gap: 16, paddingBottom: 40 },
-  listCard: { backgroundColor: colors.card, borderRadius: 18, paddingHorizontal: 16, ...shadow },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14 },
-  divider: { borderTopWidth: 1, borderTopColor: colors.border },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.border },
-  name: { flex: 1, fontSize: 15, color: colors.text },
-  info: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.blushLight, borderRadius: 18, padding: 16 },
-  infoTitle: { fontWeight: "700", color: colors.text },
-  infoText: { color: colors.muted, fontSize: 13, marginTop: 2 },
+  top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
+  basket: { width: 56, height: 56, alignItems: "center", justifyContent: "center" },
+  basketLeaf: { position: "absolute", top: 8, right: 8 },
+  content: { paddingHorizontal: 20, paddingTop: 12 },
+  title: { fontFamily: serif, fontSize: 30, color: colors.text },
+  sub: { fontSize: 14, color: colors.muted, lineHeight: 21, marginTop: 8, marginBottom: 18 },
+  list: { gap: 8 },
+  row: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 12, rowGap: 6, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12 },
+  name: { fontSize: 15, fontWeight: "500", color: colors.text, minWidth: 110 },
+  tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, flexShrink: 1 },
+  more: { justifyContent: "space-between" },
+  moreText: { fontSize: 14, color: colors.text },
+  footer: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 10, backgroundColor: colors.bg },
 });

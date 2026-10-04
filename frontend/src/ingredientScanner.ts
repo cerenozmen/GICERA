@@ -1499,10 +1499,13 @@ export function candidates(live: ScanState): Candidate[] {
     };
   };
   // (Not when another frame showed the list in more rows: one is missing from these readings, as
-  // with a round jar's arced rows. A flat label shows the same rows in every frame.)
+  // with a round jar's arced rows. A flat label shows the same rows in every frame. Nor when two
+  // frames from the list's start showed it going on past this end: that end is a misread, as a
+  // mid-list comma read as a period over text below was on a real sunscreen.)
   if (
     scan.wholeReadings.length &&
-    scan.wholeReadings[0].rows.length >= rowsNeeded(scan)
+    scan.wholeReadings[0].rows.length >= rowsNeeded(scan) &&
+    scan.wholeReadings[0].rows.length >= rowsFromStart(live)
   ) {
     const readings = scan.wholeReadings.map(({ rows, heading }) => ({
       rows,
@@ -1528,6 +1531,19 @@ ${JSON.stringify(rebuilt.edges)}`,
     });
   }
   return out;
+}
+
+/**
+ * Most rows two frames showed from the list's start (whether or not they reached its end). A frame
+ * that looks whole with fewer rows has a false end: the list was seen going on past it.
+ */
+function rowsFromStart(scan: ScanState): number {
+  const counts = scan.observations
+    .map(o => o.reading.section)
+    .filter(section => !!section?.start)
+    .map(section => section!.rows.length)
+    .sort((a, b) => b - a);
+  return counts[1] ?? 0;
 }
 
 /** Rows the rebuilt list must have at least (see ScanState.rowsSeen and mixedLines). */

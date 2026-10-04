@@ -2,19 +2,24 @@ import { Platform } from "react-native";
 import { CleanRating } from "./types";
 
 export const colors = {
-  bg: "#FBF3F0",
+  bg: "#F8F4EE",
   card: "#FFFFFF",
-  primary: "#3F6B4F",
-  primaryLight: "#E3F1E4",
+  primary: "#1F4D3A",
+  primaryDark: "#173A2C",
+  primaryLight: "#E6EEE7",
+  accent: "#F26B2A",
+  accentLight: "#FDEBE1",
+  peach: "#FCE9DF",
   blush: "#F6DCD8",
   blushLight: "#FBEAE7",
-  text: "#2B2B2B",
-  muted: "#7D7D7D",
-  border: "#EFE3DF",
+  text: "#1F2A24",
+  muted: "#7A7F7B",
+  border: "#ECE6DE",
   danger: "#C0503F",
   dangerLight: "#FBE3DF",
-  warning: "#D9932B",
-  warningLight: "#FCEFD6",
+  warning: "#E07B39",
+  warningLight: "#FCEFE4",
+  scanBg: "#1E2A24",
 };
 
 export const serif = Platform.select({ ios: "Georgia", default: "serif" });
@@ -26,9 +31,9 @@ export const ratingStyle: Record<CleanRating, { label: string; color: string; bg
 };
 
 export const shadow = {
-  shadowColor: "#8A5A50",
-  shadowOpacity: 0.08,
-  shadowRadius: 12,
-  shadowOffset: { width: 0, height: 4 },
-  elevation: 2,
+  shadowColor: "#5A4A3A",
+  shadowOpacity: 0.06,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 3 },
+  elevation: 1,
 };

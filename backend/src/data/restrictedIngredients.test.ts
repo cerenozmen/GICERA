@@ -10,4 +10,12 @@ describe("restrictedIngredientSeed", () => {
     const matches = restrictedIngredientSeed.filter((entry) => entry.aliases.some((alias) => alias.toLowerCase() === "bha"));
     assert.deepEqual(matches, []);
   });
+
+  it("maps UV filters' common label names to their CosIng (INCI) entries", () => {
+    const entry = (alias: string) => restrictedIngredientSeed.find((e) => e.aliases.includes(alias))?.inciName;
+    assert.equal(entry("avobenzone"), "BUTYL METHOXYDIBENZOYLMETHANE");
+    assert.equal(entry("oxybenzone"), "BENZOPHENONE-3");
+    assert.equal(entry("octisalate"), "ETHYLHEXYL SALICYLATE");
+    assert.equal(entry("octinoxate"), "ETHYLHEXYL METHOXYCINNAMATE");
+  });
 });

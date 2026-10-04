@@ -5,6 +5,8 @@ import { addFrame, candidates, createScan, readSection, rebuiltList, ScanFrame, 
 // tube's silhouette on both sides in every frame.
 const tube1658: { frames: ScanFrame[] } = require('./fixtures/scan-tube-1658.json');
 const tube1652: { frames: ScanFrame[] } = require('./fixtures/scan-tube-1652.json');
+// Sunscreen cream (Oct 2026): a long list; one snapshot misread a mid-list comma as a final period.
+const sunscreenFalseEnd: { frames: ScanFrame[] } = require('./fixtures/scan-sunscreen-false-end.json');
 
 /** A photo log of the old single-photo flow (4080x3060, portrait): blocks of [text, confidence, box]. */
 function photo(name: string): ScanFrame {
@@ -171,6 +173,19 @@ describe('where a list starts and ends in one frame', () => {
     const { section } = readSection(frame(['Ingredients: Aqua, Gycerin', 'Gyce Stearate.', 'Alcohol, Stearic Acid, Palmitic Acid, Phenoxyethanol.', 'Made in Turkey.']));
     expect(section?.rows).not.toEqual(['Aqua, Gycerin', 'Gyce Stearate.']);
     expect(section?.whole).toBe(false);
+  });
+});
+
+describe('a false end in one frame (real sunscreen scan)', () => {
+  it('does not take a short "whole" frame when frames from the same start showed the list going on', () => {
+    // Frame "INGREDIENTS ... PEG-100 STEARATE, CETEARETH 20." looked whole (period, text below); three
+    // frames from the heading showed 11-14 rows. Checking that frame scored the cream on 11 of ~28 names.
+    const scan = createScan();
+    for (const f of sunscreenFalseEnd.frames) addFrame(scan, readSection(f));
+    for (const candidate of candidates(scan)) {
+      expect(candidate.ingredientsText).not.toMatch(/CETEARETH[\s-]*20\W*$/i);
+    }
+    expect(candidates(scan).some((c) => c.path === 'full_frame')).toBe(false);
   });
 });
 

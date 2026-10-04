@@ -38,12 +38,14 @@ describe("photo analysis: face cream shots", () => {
     assert.equal(analysis.scoring, null);
   });
 
-  it("counts harmless one-letter misreads as read (a sharp shot that 0.806 coverage used to reject)", () => {
-    // Unknowns: Glyeryl Stearate, Parafinum Liquidum, Ethylhexylgycerin, Hexamethyindanopyran (1 letter
-    // each) and PEG-40 Castor 0i, Potasiun Phosphate (2 letters): 25 matched + 4 read = 29/31.
+  it("takes harmless one-letter misreads as their names (a sharp shot that 0.806 coverage used to reject)", () => {
+    // Glyeryl Stearate, Parafinum Liquidum, Ethylhexylgycerin, Hexamethyindanopyran (1 letter each) are
+    // taken as their names; PEG-40 Castor 0i, Potasiun Phosphate (2 letters) stay unknown: 29/31.
     const analysis = shot("2026-09-24T12:48:13");
-    assert.ok(analysis.coverage < MIN_PHOTO_COVERAGE);
+    assert.equal(analysis.coverage, 29 / 31);
     assert.equal(analysis.readCoverage, 29 / 31);
+    const corrected = analysis.ingredients.filter((i) => i.corrected).map((i) => i.text);
+    assert.deepEqual(corrected.sort(), ["Ethylhexylgycerin", "Glyeryl Stearate", "Hexamethyindanopyran", "Parafinum Liquidum"]);
     assert.equal(analysis.scoring?.cleanScore, 80);
   });
 

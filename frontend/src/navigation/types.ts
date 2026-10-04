@@ -2,23 +2,30 @@ import { Product } from "../types";
 
 export type RootStackParamList = {
   Welcome: undefined;
+  /** The skin profile questions; `edit` when reopened from the profile (returns there instead of home). */
+  SkinQuiz: { edit?: boolean } | undefined;
   Main: undefined;
   Scan: undefined;
+  /** A barcode the database doesn't know: ways to go on (scan the list instead). */
+  ProductNotFound: { barcode: string };
+  Favorites: undefined;
+  PostDetail: { postId: string };
+  Notifications: undefined;
+  /** Find a product by name or brand (the not-found screen's "Ürün adını yazarak ara"). */
+  ProductSearch: undefined;
+  NewPost: undefined;
   ProductDetail: { barcode: string; product?: Product };
-  IngredientAnalysis: { product: Product };
+  /** `fromScan`: just read by the scanner ("Ürün içeriği okundu"), going on to the result. */
+  IngredientAnalysis: { product: Product; fromScan?: boolean };
   PregnancyMode: undefined;
-  /** The barcode-less product's ingredient scan: guided high-resolution photos (GuidedScanScreen). */
+  /** The ingredient list scan (the live scanner, IngredientScanScreen). */
   IngredientScan: { productName?: string } | undefined;
-  /** Development only: the former continuous live scanner, kept for regression comparisons. */
-  IngredientLiveScan: { productName?: string } | undefined;
-  /** Development only: local OCR preprocessing POC (photo capture with JPEGs kept, ML Kit bench). */
-  OcrBench: undefined;
 };
 
 export type MainTabParamList = {
   Home: undefined;
-  Explore: undefined;
+  Discussion: undefined;
   ScanTab: undefined;
-  Favorites: undefined;
+  History: undefined;
   Profile: undefined;
 };

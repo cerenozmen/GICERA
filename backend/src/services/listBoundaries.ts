@@ -1,4 +1,4 @@
-import { IngredientVocabulary, inciKey } from "./ingredientCoverage";
+import { boundedDistance, IngredientVocabulary, inciKey } from "./ingredientCoverage";
 
 /**
  * Were the edges of the text rows an ingredient list was read from really seen, or cut off (by the
@@ -156,6 +156,18 @@ export function edgeWordKnown(text: string, side: "start" | "end", vocabulary: I
 export function checkListBoundaries(rows: string[], heading: boolean, vocabulary: IngredientVocabulary, words: WordSet): ListBoundaries {
   const label = rows.join(" ");
   const known = (text: string) => !!text.trim() && vocabulary.known.has(inciKey(text.trim()));
+  // The item across a break, a known name with one letter too many ("OCTYL METHOXYL" + "CINNAMATE":
+  // the split word's hyphen read as "L" on a real sunscreen): a word the label split there. Never one
+  // letter short: a row cut loses letters, and a cut piece joined to the next row is exactly that.
+  // Only the break is judged here; the analysis decides what the name is.
+  const nearlyKnown = (text: string) => {
+    const key = inciKey(text.trim());
+    if (key.length < 8) return false;
+    for (const candidate of vocabulary.known.keys()) {
+      if (candidate.length === key.length - 1 && boundedDistance(key, candidate, 1) === 1) return true;
+    }
+    return false;
+  };
   const checks: BoundaryCheck[] = [];
   // A row's end is whole when it ends an item, a known name, or a whole word (hyphenated words go on).
   const endIsWhole = (text: string) => {
@@ -201,6 +213,7 @@ export function checkListBoundaries(rows: string[], heading: boolean, vocabulary
       let verified = true;
       let reason = "whole words";
       if (tail && known(joined)) reason = `known item across the break: "${joined}"`;
+      else if (tail && nearlyKnown(joined)) reason = `known item across the break, one letter off: "${joined}"`;
       else if (!endIsWhole(text)) {
         verified = false;
         reason = `row ends in a piece of a word: "${tail.slice(-16)}"`;

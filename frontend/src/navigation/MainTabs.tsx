@@ -1,30 +1,64 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import type { IconName } from "../components/icons";
-import { BottomTabBarButtonProps, createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Pressable, StyleSheet, View } from "react-native";
+import { BottomTabBarProps, createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../theme";
-import { ExploreScreen } from "../screens/ExploreScreen";
-import { FavoritesScreen } from "../screens/FavoritesScreen";
+import { DiscussionScreen } from "../screens/DiscussionScreen";
+import { HistoryScreen } from "../screens/HistoryScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { MainTabParamList } from "./types";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-const ICONS: Record<string, { on: IconName; off: IconName }> = {
-  Home: { on: "home", off: "home-outline" },
-  Explore: { on: "search", off: "search-outline" },
-  Favorites: { on: "heart", off: "heart-outline" },
-  Profile: { on: "person", off: "person-outline" },
+const TABS: Record<keyof MainTabParamList, { label: string; on: IconName; off: IconName }> = {
+  Home: { label: "Anasayfa", on: "home-outline", off: "home-outline" },
+  Discussion: { label: "Tartışma", on: "chatbubble-ellipses", off: "chatbubble-ellipses-outline" },
+  ScanTab: { label: "Barkod Okuma", on: "scan-outline", off: "scan-outline" },
+  History: { label: "Geçmiş", on: "time-outline", off: "time-outline" },
+  Profile: { label: "Profilim", on: "person-outline", off: "person-outline" },
 };
 
-function ScanButton({ onPress }: BottomTabBarButtonProps) {
+/** The design's bar: the active tab sits on a soft green tile; the scan button is a raised orange square. */
+function TabBar({ state, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.scanWrap}>
-      <Pressable style={styles.scan} onPress={onPress}>
-        <Ionicons name="scan-outline" size={30} color="#fff" />
-      </Pressable>
+    <View style={[styles.bar, { paddingBottom: insets.bottom + 8 }]}>
+      {state.routes.map((route, index) => {
+        const name = route.name as keyof MainTabParamList;
+        const tab = TABS[name];
+        const focused = state.index === index;
+        if (name === "ScanTab") {
+          return (
+            <Pressable key={route.key} style={styles.item} onPress={() => navigation.getParent()?.navigate("Scan")} accessibilityLabel={tab.label}>
+              <View style={styles.scan}>
+                <Ionicons name="scan-outline" size={26} color="#fff" />
+              </View>
+              <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit>
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        }
+        return (
+          <Pressable
+            key={route.key}
+            style={[styles.item, focused && styles.itemOn]}
+            onPress={() => {
+              const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+              if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+            }}
+            accessibilityState={{ selected: focused }}
+            accessibilityLabel={tab.label}
+          >
+            <Ionicons name={focused ? tab.on : tab.off} size={25} color={focused ? colors.primary : colors.text} />
+            <Text style={[styles.label, focused && styles.labelOn]} numberOfLines={1} adjustsFontSizeToFit>
+              {tab.label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -32,51 +66,35 @@ function ScanButton({ onPress }: BottomTabBarButtonProps) {
 const Empty = () => null;
 
 export function MainTabs() {
-  const insets = useSafeAreaInsets();
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.muted,
-        tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border, height: 64 + insets.bottom, paddingTop: 6, paddingBottom: insets.bottom },
-        tabBarLabelStyle: { fontSize: 11, marginBottom: 6 },
-        tabBarIcon: ({ focused, color }) => {
-          const icon = ICONS[route.name];
-          return icon ? <Ionicons name={focused ? icon.on : icon.off} size={22} color={color} /> : null;
-        },
-      })}
-    >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ title: "Ana Sayfa" }} />
-      <Tab.Screen name="Explore" component={ExploreScreen} options={{ title: "Keşfet" }} />
-      <Tab.Screen
-        name="ScanTab"
-        component={Empty}
-        options={{ title: "", tabBarButton: (props) => <ScanButton {...props} /> }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.getParent()?.navigate("Scan");
-          },
-        })}
-      />
-      <Tab.Screen name="Favorites" component={FavoritesScreen} options={{ title: "Favoriler" }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: "Profil" }} />
+    <Tab.Navigator tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false }}>
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Discussion" component={DiscussionScreen} />
+      <Tab.Screen name="ScanTab" component={Empty} />
+      <Tab.Screen name="History" component={HistoryScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
 
 const styles = StyleSheet.create({
-  scanWrap: { flex: 1, alignItems: "center" },
+  bar: { flexDirection: "row", alignItems: "flex-end", backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 6, paddingHorizontal: 8 },
+  item: { flex: 1, alignItems: "center", justifyContent: "flex-end", gap: 4, paddingVertical: 8, borderRadius: 14 },
+  itemOn: { backgroundColor: colors.primaryLight },
+  label: { fontSize: 11.5, color: colors.text },
+  labelOn: { color: colors.primary, fontWeight: "500" },
   scan: {
-    marginTop: -22,
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: colors.primary,
+    marginTop: -26,
+    width: 54,
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 4,
-    borderColor: colors.bg,
+    shadowColor: colors.accent,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
 });

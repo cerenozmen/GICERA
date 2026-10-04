@@ -1,6 +1,7 @@
 import { supabase } from "../db/supabaseClient";
 import { ProductLookupResponse, ProductRecord } from "../types/product";
 import { fetchProductFromOBF } from "./openBeautyFactsClient";
+import { sanitizeSearch } from "./forumRules";
 import { scoreIngredientsText } from "./scoringService";
 
 interface ProductRow {
@@ -134,4 +135,17 @@ export async function lookupProductByBarcode(barcode: string): Promise<ProductLo
 
   const record = await cacheProductFromOBF(barcode, obfProduct);
   return { found: true, product: record };
+}
+
+/** Products whose name or brand contains every word of `query` (case-insensitive), named ones first. */
+export async function searchProducts(query: string): Promise<ProductRecord[]> {
+  const words = sanitizeSearch(query).split(" ").filter((w) => w.length >= 2).slice(0, 4);
+  if (words.length === 0) return [];
+  // Every word must match the name or the brand: and(or(...), or(...)).
+  const filter = `and(${words.map((w) => `or(product_name.ilike.*${w}*,brands.ilike.*${w}*)`).join(",")})`;
+  const { data, error } = await supabase.from("products").select("*").not("product_name", "is", null).or(filter).limit(30).returns<ProductRow[]>();
+  if (error) {
+    throw new Error(`Supabase search failed: ${error.message}`);
+  }
+  return (data ?? []).map(rowToRecord);
 }

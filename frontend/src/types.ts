@@ -21,6 +21,8 @@ export interface Product {
   unverifiedIngredients?: string[];
   /** Scanned lists without a score: the names that withheld it (see scoreBlockers). */
   scoreBlockers?: { misread: string[]; notInDictionary: string[] };
+  /** Scanned lists: names the user corrected by hand (as read → as typed), shown with the result. */
+  manualFixes?: { from: string; to: string }[];
   /** Scanned lists: the scanner that read it, to scan again with ("Tekrar tara"). */
   rescanRoute?: "IngredientScan" | "IngredientLiveScan";
 }
@@ -28,3 +30,40 @@ export interface Product {
 export type LookupResult =
   | { found: true; product: Product }
   | { found: false; barcode: string; message: string };
+
+/** Community forum (Tartışma), as the server returns it. */
+export interface ForumPost {
+  id: string;
+  authorName: string;
+  title: string;
+  body: string;
+  category: string;
+  createdAt: string;
+  replyCount: number;
+  likeCount: number;
+  liked: boolean;
+  saved: boolean;
+  /** Written from this phone: it may delete it. */
+  mine: boolean;
+}
+
+export interface ForumReply {
+  id: string;
+  postId: string;
+  authorName: string;
+  text: string;
+  createdAt: string;
+  likeCount: number;
+  liked: boolean;
+  mine: boolean;
+}
+
+/** A reply someone else wrote under one of this phone's posts. */
+export interface ForumNotification {
+  replyId: string;
+  postId: string;
+  postTitle: string;
+  authorName: string;
+  text: string;
+  createdAt: string;
+}

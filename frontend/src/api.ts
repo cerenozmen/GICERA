@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config";
-import { CleanRating, FlaggedIngredient, LookupResult } from "./types";
+import { CleanRating, FlaggedIngredient, LookupResult, Product } from "./types";
 
 export async function lookupBarcode(barcode: string): Promise<LookupResult> {
   const response = await fetch(`${API_BASE_URL}/products/${encodeURIComponent(barcode)}`);
@@ -10,6 +10,18 @@ export async function lookupBarcode(barcode: string): Promise<LookupResult> {
     throw new Error(`Sunucu hatası (${response.status})`);
   }
   return (await response.json()) as LookupResult;
+}
+
+/** Products by name or brand (every word must match). */
+export async function searchProducts(query: string): Promise<Product[]> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/products/search?q=${encodeURIComponent(query)}`);
+  } catch {
+    throw new Error("Sunucuya ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene.");
+  }
+  if (!response.ok) throw new Error(`Sunucu hatası (${response.status})`);
+  return ((await response.json()) as { products: Product[] }).products;
 }
 
 export interface AnalysedIngredient {
@@ -90,6 +102,11 @@ export type ScanResult = { scanStatus: ScanStatus; analysisStatus: AnalysisStatu
   | { complete: false; reliable: false; unverifiedBoundaries: { kind: "start" | "break" | "end" | "brackets"; row: number; reason: string }[] }
   | ({ complete: true } & AnalysisResult)
 );
+
+/** Analyses an ingredient list as text (a scanned list with names the user corrected by hand). */
+export function analyzeText(ingredientsText: string): Promise<AnalysisResult> {
+  return postJson<AnalysisResult>("/analyze/text", { ingredientsText });
+}
 
 /** Checks a scanner candidate (see ingredientScanner.ts `candidates`) and analyses it once complete. */
 export function analyzeScan(candidate: {

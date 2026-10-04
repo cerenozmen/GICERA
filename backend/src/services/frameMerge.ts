@@ -123,6 +123,20 @@ function align(base: IngredientAssessment[], other: IngredientAssessment[], anyw
   return pairs.reverse();
 }
 
+/**
+ * A frame's analysis as read: names taken for a harmless name one letter off (`corrected`) count as
+ * unknown again here, so a guess never serves as an exact read for the merge (it must not outvote or
+ * "correct" another frame's read). The merged list gets that correction at the end.
+ */
+function asRead(analysis: PhotoAnalysis): PhotoAnalysis {
+  if (!analysis.ingredients.some((item) => item.corrected)) return analysis;
+  const ingredients = analysis.ingredients.map((item): IngredientAssessment =>
+    item.corrected ? { text: item.text, status: "unknown", kind: "resembles_safe", nearest: item.matchedName, distance: 1 } : item
+  );
+  const matched = ingredients.filter((item) => item.status === "matched").length;
+  return { ...analysis, ingredients, matched, unknown: ingredients.length - matched, coverage: ingredients.length ? matched / ingredients.length : 0 };
+}
+
 export function analyzeFrames(
   inputs: FrameInput[],
   vocabulary: IngredientVocabulary,
@@ -131,7 +145,7 @@ export function analyzeFrames(
   const frames: FrameSummary[] = inputs.map((frame) => ({
     status: frame.status,
     role: frame.role ?? "complete",
-    analysis: frame.status === "ok" && frame.tokens.length ? analyzePhotoIngredients(frame.tokens, vocabulary, score) : null,
+    analysis: frame.status === "ok" && frame.tokens.length ? asRead(analyzePhotoIngredients(frame.tokens, vocabulary, score)) : null,
   }));
   const isEvidence = (index: number) => inputs[index].role === "evidence";
   const donors = frames.flatMap((frame, index) => (frame.analysis ? [index] : []));

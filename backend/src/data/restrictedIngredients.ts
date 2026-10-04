@@ -15,6 +15,35 @@ export interface RestrictedIngredientSeed {
  */
 export const restrictedIngredientSeed: RestrictedIngredientSeed[] = [
   {
+    // The old INCI name and the common name of the same UV filter, still printed on labels (a real
+    // sunscreen, Oct 2026: "OCTYL METHOXY-/CINNAMATE"). Same entry as CosIng's row for it.
+    inciName: "ETHYLHEXYL METHOXYCINNAMATE",
+    aliases: ["octyl methoxycinnamate", "octinoxate"],
+    restrictionType: "controversial",
+    notes: "AB Kozmetik Tüzüğü Ek VI (UV filtresi - düzenlemeye tabi). Maksimum konsantrasyon: 10%",
+  },
+  // Common (US) names of UV filters printed on labels instead of the INCI name (a real sunscreen,
+  // Oct 2026: "AVOBENZONE", which without this resembled azobenzene, a banned substance). Each joins
+  // CosIng's entry for that filter.
+  {
+    inciName: "BUTYL METHOXYDIBENZOYLMETHANE",
+    aliases: ["avobenzone"],
+    restrictionType: "controversial",
+    notes: "AB Kozmetik Tüzüğü Ek VI (UV filtresi - düzenlemeye tabi). Maksimum konsantrasyon: 5%",
+  },
+  {
+    inciName: "BENZOPHENONE-3",
+    aliases: ["oxybenzone"],
+    restrictionType: "controversial",
+    notes: "AB Kozmetik Tüzüğü Ek VI (UV filtresi - düzenlemeye tabi). Maksimum konsantrasyon: 10%. Kullanım koşulları: Contains Benzophenone -3 (1)",
+  },
+  {
+    inciName: "ETHYLHEXYL SALICYLATE",
+    aliases: ["octisalate"],
+    restrictionType: "controversial",
+    notes: "AB Kozmetik Tüzüğü Ek VI (UV filtresi - düzenlemeye tabi). Maksimum konsantrasyon: 5%",
+  },
+  {
     inciName: "retinol",
     aliases: ["retinol", "retinyl palmitate", "retinyl acetate", "tretinoin"],
     restrictionType: "pregnancy_unsafe",
