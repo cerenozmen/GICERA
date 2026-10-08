@@ -22,7 +22,10 @@ export const colors = {
   scanBg: "#1E2A24",
 };
 
-export const serif = Platform.select({ ios: "Georgia", default: "serif" });
+/** The logo artwork's own cream, so its faded edges disappear into the page. */
+export const LOGO_BG = "#FBF4ED";
+
+export const serif =Platform.select({ ios: "Georgia", default: "serif" });
 
 export const ratingStyle: Record<CleanRating, { label: string; color: string; bg: string }> = {
   clean: { label: "Temiz Ürün", color: colors.primary, bg: colors.primaryLight },

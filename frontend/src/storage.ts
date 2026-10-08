@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AuthSession, AuthUser } from "./authApi";
 import { RoutineProduct } from "./routine";
 import { Product } from "./types";
 
@@ -47,6 +48,12 @@ export interface RoutineChecks {
   done: string[];
 }
 
+/** The signed-in account kept on the phone. */
+export interface StoredAuth {
+  user: AuthUser;
+  session: AuthSession;
+}
+
 export const DEFAULT_SETTINGS: Settings = { pregnancyMode: true, highlightRisky: true, showNotes: true };
 
 const KEYS = {
@@ -60,6 +67,7 @@ const KEYS = {
   notificationsSeen: "gicera.notificationsSeen",
   routineProducts: "gicera.routineProducts",
   forumDevice: "gicera.forumDevice",
+  auth: "gicera.auth",
 };
 
 async function read<T>(key: string, fallback: T): Promise<T> {
@@ -100,6 +108,8 @@ export const storage = {
   saveNickname: (value: string) => write(KEYS.nickname, value),
   loadForumDevice: () => read<string | null>(KEYS.forumDevice, null),
   saveForumDevice: (value: string) => write(KEYS.forumDevice, value),
+  loadAuth: () => read<StoredAuth | null>(KEYS.auth, null),
+  saveAuth: (value: StoredAuth | null) => write(KEYS.auth, value),
 };
 
 export function toSnapshot(product: Product): ProductSnapshot {

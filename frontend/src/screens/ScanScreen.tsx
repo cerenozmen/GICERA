@@ -1,7 +1,7 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Camera } from "react-native-camera-kit";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCameraPermission } from "react-native-vision-camera";
@@ -63,7 +63,7 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
   const manualValid = manualCode.trim().length >= 8;
 
   return (
-    <KeyboardAvoidingView style={styles.dark} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={styles.dark} behavior="padding">
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <BackButton dark onPress={() => navigation.goBack()} />
         <Text style={styles.title}>Barkod tara</Text>
