@@ -6,7 +6,9 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../AppContext";
-import { PrimaryButton, Tag } from "../components/common";
+import { useAuth } from "../AuthContext";
+import { Avatar, PrimaryButton, Tag } from "../components/common";
+import { displayName } from "../formRules";
 import { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { colors, serif } from "../theme";
 
@@ -18,6 +20,14 @@ type Props = CompositeScreenProps<
 export function ProfileScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { history, favorites, settings, skinProfile, clearHistory } = useApp();
+  const { user, signOut } = useAuth();
+
+  function confirmSignOut() {
+    Alert.alert("Çıkış yapılsın mı?", "Cilt profilin ve favorilerin bu telefonda kalır.", [
+      { text: "Vazgeç", style: "cancel" },
+      { text: "Çıkış yap", style: "destructive", onPress: signOut },
+    ]);
+  }
 
   function confirmClearHistory() {
     Alert.alert("Tarama geçmişi silinsin mi?", "Bu işlem geri alınamaz. Favorilerin silinmez.", [
@@ -33,6 +43,27 @@ export function ProfileScreen({ navigation }: Props) {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 32, gap: 16 }}>
       <Text style={styles.title}>Profilim</Text>
+
+      {user ? (
+        <Pressable style={styles.account} onPress={() => navigation.navigate("MyInfo")}>
+          <Avatar name={displayName(user)} size={48} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.accountName} numberOfLines={1}>
+              {displayName(user)}
+            </Text>
+            <Text style={styles.accountMail} numberOfLines={1}>
+              {user.email}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+        </Pressable>
+      ) : (
+        <View style={styles.guest}>
+          <Text style={styles.emptyTitle}>Hesabına giriş yap</Text>
+          <Text style={styles.emptyText}>Giriş yap veya kaydol; bilgilerini yönet ve hesabınla devam et.</Text>
+          <PrimaryButton label="Giriş yap veya kaydol" arrow onPress={() => navigation.navigate("Auth")} />
+        </View>
+      )}
 
       {skinProfile ? (
         <View style={styles.profile}>
@@ -75,7 +106,8 @@ export function ProfileScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.card}>
-        <MenuRow icon="heart-outline" label="Favorilerim" onPress={() => navigation.navigate("Favorites")} />
+        {user && <MenuRow icon="person-outline" label="Bilgilerim" onPress={() => navigation.navigate("MyInfo")} />}
+        <MenuRow icon="heart-outline" label="Favorilerim" onPress={() => navigation.navigate("Favorites")} divider={!!user} />
         <MenuRow
           icon="woman-outline"
           label={`Hamilelik Modu${settings.pregnancyMode ? " (aktif)" : ""}`}
@@ -83,6 +115,7 @@ export function ProfileScreen({ navigation }: Props) {
           divider
         />
         <MenuRow icon="trash-outline" label="Tarama geçmişini sil" onPress={confirmClearHistory} divider />
+        {user && <MenuRow icon="log-out-outline" label="Çıkış yap" onPress={confirmSignOut} divider />}
       </View>
 
       <View style={styles.tip}>
@@ -126,6 +159,10 @@ function MenuRow({ icon, label, onPress, divider }: { icon: IconName; label: str
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   title: { fontFamily: serif, fontSize: 36, color: colors.text },
+  account: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 20, padding: 14 },
+  accountName: { fontSize: 17, fontWeight: "600", color: colors.text },
+  accountMail: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  guest: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 22, padding: 18, gap: 10 },
   profile: { backgroundColor: colors.primary, borderRadius: 22, padding: 18, gap: 14 },
   profileHead: { flexDirection: "row", alignItems: "center", gap: 12 },
   drop: { width: 46, height: 46, borderRadius: 23, borderWidth: 3, borderColor: "#7FB08F", alignItems: "center", justifyContent: "center" },

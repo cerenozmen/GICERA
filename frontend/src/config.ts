@@ -7,4 +7,9 @@ const DEVICE_HOST: string | null = null;
 
 const DEFAULT_HOST = DEVICE_HOST ?? (Platform.OS === "android" ? "10.0.2.2" : "localhost");
 
+// "Google ile devam et": the *Web* OAuth client ID from Google Cloud Console (APIs & Services > Credentials),
+// the same one enabled under Supabase > Authentication > Providers > Google. Also needs an Android OAuth
+// client for package com.gicera with your signing key's SHA-1. While null the button explains it isn't set up.
+export const GOOGLE_WEB_CLIENT_ID: string | null = "558878561465-ebsbseq6m6jqgpg3hpjtv37n1r7p5297.apps.googleusercontent.com";
+
 export const API_BASE_URL = `http://${DEFAULT_HOST}:4000/api`;

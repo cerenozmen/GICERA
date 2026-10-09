@@ -4,6 +4,7 @@ import { ReactNode, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../AppContext";
+import { useAuth } from "../AuthContext";
 import { BackButton, Chip, PrimaryButton } from "../components/common";
 import { RootStackParamList } from "../navigation/types";
 import { EMPTY_PROFILE, SkinProfile } from "../storage";
@@ -28,6 +29,7 @@ const STEPS = 6;
 export function SkinQuizScreen({ navigation, route }: NativeStackScreenProps<RootStackParamList, "SkinQuiz">) {
   const insets = useSafeAreaInsets();
   const { skinProfile, saveSkinProfile, updateSettings } = useApp();
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [p, setP] = useState<SkinProfile>(skinProfile ?? EMPTY_PROFILE);
   const [whyOpen, setWhyOpen] = useState(false);
@@ -55,7 +57,8 @@ export function SkinQuizScreen({ navigation, route }: NativeStackScreenProps<Roo
     saveSkinProfile(p);
     if (p.pregnant === "Evet" || p.pregnant === "Hayır") updateSettings({ pregnancyMode: p.pregnant === "Evet" });
     if (route.params?.edit) navigation.goBack();
-    else navigation.reset({ index: 0, routes: [{ name: "Main" }] });
+    // Sign-in comes last, after the profile (skipped when already signed in).
+    else navigation.reset({ index: 0, routes: [{ name: user ? "Main" : "Auth" }] });
   }
 
   function toggleConcern(c: string) {

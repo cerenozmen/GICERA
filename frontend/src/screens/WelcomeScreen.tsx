@@ -4,26 +4,26 @@ import { useRef } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../AppContext";
+import { useAuth } from "../AuthContext";
 import { PrimaryButton } from "../components/common";
 import { RootStackParamList } from "../navigation/types";
-import { colors, serif } from "../theme";
+import { colors, LOGO_BG, serif } from "../theme";
 
 const LOGO = require("../../assets/logo-mark.jpg");
 
 /** The intro's dots also count the quiz that follows. */
 const DOTS = 4;
-/** The logo artwork's own cream, so its faded edges disappear into the page. */
-const LOGO_BG = "#FBF4ED";
 
 export function WelcomeScreen({ navigation }: NativeStackScreenProps<RootStackParamList, "Welcome">) {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const { markWelcomeSeen } = useApp();
+  const { user } = useAuth();
   const scroller = useRef<ScrollView>(null);
 
   function skip() {
     markWelcomeSeen();
-    navigation.reset({ index: 0, routes: [{ name: "Main" }] });
+    navigation.reset({ index: 0, routes: [{ name: user ? "Main" : "Auth" }] });
   }
 
   const logoWidth = Math.min(width * 0.78, 340);

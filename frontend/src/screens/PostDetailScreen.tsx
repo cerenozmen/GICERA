@@ -1,7 +1,7 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../AppContext";
 import { Avatar, BackButton, EmptyState, PrimaryButton, Tag } from "../components/common";
@@ -154,7 +154,7 @@ export function PostDetailScreen({ navigation, route }: NativeStackScreenProps<R
   }
 
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={styles.screen} behavior="padding">
       <View style={[styles.top, styles.topRow, { paddingTop: insets.top + 8 }]}>
         <BackButton onPress={() => navigation.goBack()} />
         <Pressable
