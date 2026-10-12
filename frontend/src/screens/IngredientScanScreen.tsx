@@ -3,7 +3,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useRef, useState } from "react";
 import TextRecognition, { TextRecognitionResult } from "@react-native-ml-kit/text-recognition";
 import { orientedSize, toScanFrame } from "../guidedScan";
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, NativeModules, Pressable, StyleSheet, Text, View } from "react-native";
 import RNFS from "react-native-fs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera, useCameraDevice, useCameraPermission } from "react-native-vision-camera";
@@ -50,6 +50,17 @@ const IMPROVE_PHOTOS = 3;
 const CHECK_INTERVAL_MS = 1500;
 /** Text rows lower than this (snapshot pixels) are too small to read reliably. */
 const SMALL_TEXT_PX = 12;
+/**
+ * Glare: share of the text region's cells a reflection washed out (no letter left, clipped white; see
+ * ImageCropModule.glare) from which the hint asks to tilt the phone, in this many frames in a row (one
+ * glinting frame while the product turns is not worth a hint). Measured at most this often, on regions
+ * of at least GLARE_MIN_CELLS cells (fewer can't tell a spot from a gap). Starting values: on the bench
+ * photos (no glare) every share was 0; a blown-out spot over a sixth of the list gave 0.05-0.11.
+ */
+const GLARE_SHARE = 0.05;
+const GLARE_MIN_CELLS = 12;
+const GLARE_FRAMES = 2;
+const GLARE_INTERVAL_MS = 700;
 
 const MESSAGES = {
   show: "İçerik listesini kameraya gösterin.",
@@ -59,6 +70,7 @@ const MESSAGES = {
   wider: "Listenin diğer tarafını da kameraya göstermek için ürünü biraz daha çevirin.",
   frame: "Listenin tamamını kadraja alın.",
   closer: "Yazıları biraz daha yakından ve sabit gösterin.",
+  glare: "Işık yansıyor. Telefonu biraz eğin ya da ürünü ışıktan uzaklaştırın.",
   failed: "İçerik listesinin tamamı güvenilir şekilde okunamadı. Tekrar deneyin.",
   done: "İçerikler okundu ✓",
 };
@@ -78,6 +90,8 @@ interface LoggedFrame {
   lines: ScanLine[];
   verdict: FrameReport["verdict"];
   reason: string | null;
+  /** Share of the text region washed out by a reflection, when measured. */
+  glare?: number;
   section: FrameReading["section"];
   /** MULTI_VIEW: where the frame's list rows were placed, their exact overlap with the rebuilt rows,
    *  what they added, and the rebuilt rows after the frame (when it changed them). */
@@ -211,6 +225,9 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
     let improvePhotos = 0;
     let lastReading: FrameReading | null = null;
     let lastFailure = "";
+    let lastGlareAt = 0;
+    /** Measured frames in a row with glare over the text. */
+    let glareStreak = 0;
     const session = `scan-${started}`;
     // Development panel, updated after every frame and server exchange.
     const dev = newPanel(session);
@@ -292,6 +309,29 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
       return `Birkaç içerik net okunamadı (${list}). Ürünü biraz ${turn} çevirip bu kısmı ortaya getirin ve sabit tutun.`;
     };
 
+    /**
+     * How much of the frame's text (the list's rows, or every row while no list is found: glare may be
+     * why) a reflection washed out; updates glareStreak. Undefined when not measured.
+     */
+    const measureGlare = async (path: string, reading: FrameReading): Promise<number | undefined> => {
+      const rows = reading.section ? reading.rows.slice(reading.section.from, reading.section.to) : reading.rows;
+      if (rows.length < 3 || !reading.lineHeight || Date.now() - lastGlareAt < GLARE_INTERVAL_MS) return undefined;
+      lastGlareAt = Date.now();
+      const left = Math.min(...rows.map((row) => row.left));
+      const top = Math.min(...rows.map((row) => row.top));
+      const width = Math.max(...rows.map((row) => row.right)) - left;
+      const height = Math.max(...rows.map((row) => row.bottom)) - top;
+      try {
+        // Cells a row and a half tall: small enough to see a spot, big enough to hold a letter's strokes.
+        const { share, cells } = (await NativeModules.ImageCrop.glare(path, left, top, width, height, Math.max(16, reading.lineHeight * 1.5))) as { share: number; cells: number };
+        if (cells < GLARE_MIN_CELLS) return undefined;
+        glareStreak = share >= GLARE_SHARE ? glareStreak + 1 : 0;
+        return share;
+      } catch {
+        return undefined;
+      }
+    };
+
     /** Captures one frame, reads it and adds it to the scan. */
     const take = async (source: Source, pairedWith?: number): Promise<FrameReading | null> => {
       if (!camera.current) return null;
@@ -315,9 +355,8 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
       try {
         ocr = await TextRecognition.recognize(path);
       } catch {
-        return null;
-      } finally {
         RNFS.unlink(path).catch(() => {});
+        return null;
       }
       const ocrMs = Date.now() - ocrStart;
       // takePhoto reports the sensor's landscape size; ML Kit reads the picture upright.
@@ -328,6 +367,8 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
       const reading = readSection(frame);
       const report = addFrame(scan, reading);
       const scanMs = Date.now() - scanStart;
+      const glare = source === "snapshot" ? await measureGlare(path, reading) : undefined;
+      RNFS.unlink(path).catch(() => {});
       if (__DEV__) {
         // What this frame changed: the first rebuilt row it changed, its overlap, and the rebuilt length.
         const index = frames.length;
@@ -340,7 +381,7 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
             : changedRow < 0 && report.verdict !== "restarted"
               ? `DUPLICATE (overlap ${overlap})`
               : `${report.verdict === "restarted" ? "RESTARTED " : ""}+ row ${changedRow + 1}: "${scan.rows[changedRow]?.slice(-40) ?? ""}" overlap ${overlap}, chars ${chars(before)} → ${chars(scan.rows)}`;
-        frames.push({ at: at(), source, pairedWith, captureMs, ocrMs, scanMs, width: frame.width, height: frame.height, lines: frame.lines, verdict: report.verdict, reason: report.reason, section: reading.section,
+        frames.push({ at: at(), source, pairedWith, captureMs, ocrMs, scanMs, width: frame.width, height: frame.height, lines: frame.lines, verdict: report.verdict, reason: report.reason, glare, section: reading.section,
           placement: { offset: report.offset, overlaps: report.overlaps, grew: report.grew, newPieces: report.newPieces, mixed: report.mixed, newEvidence: report.newEvidence },
           rebuiltAfter: report.verdict === "useful" || report.verdict === "restarted" ? [...scan.rows] : undefined, change });
         const useful = changedRow >= 0 || report.verdict === "restarted";
@@ -525,6 +566,8 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
           enter("READING");
           setHint(stalled > HINT_AFTER_MS ? MESSAGES.closer : MESSAGES.reading);
         }
+        // A reflection over the text: no other hint helps until it's gone.
+        if (improveUntil === null && glareStreak >= GLARE_FRAMES) setHint(MESSAGES.glare);
 
         // Looking for clean reads of misread names: high-resolution photos (small print reads better
         // there), until the time is up; then the whole list held is shown.
