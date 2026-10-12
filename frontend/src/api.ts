@@ -120,3 +120,36 @@ export function analyzeScan(candidate: {
   // The server takes at most 200 evidence lists; the latest ones are the most useful.
   return postJson<ScanResult>("/analyze/scan", { path, readings, edges, ingredientsText, evidence: evidence.slice(-200) });
 }
+
+export interface IngredientExplanation {
+  name: string;
+  explanation: string;
+  source: "db" | "groq";
+}
+
+// Explanations already fetched this session, by lower-cased name: tapping a row again doesn't refetch.
+const explanations = new Map<string, Promise<IngredientExplanation>>();
+
+/** What an ingredient is, in plain Turkish (the server keeps every answer, so most come from its table). */
+export function explainIngredient(name: string): Promise<IngredientExplanation> {
+  const key = name.replace(/İ/g, "i").toLowerCase().replace(/\s+/g, " ").trim();
+  let pending = explanations.get(key);
+  if (!pending) {
+    pending = getExplanation(key);
+    explanations.set(key, pending);
+    pending.catch(() => explanations.delete(key)); // a failure may be retried
+  }
+  return pending;
+}
+
+async function getExplanation(name: string): Promise<IngredientExplanation> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/ingredients/explanation?name=${encodeURIComponent(name)}`);
+  } catch {
+    throw new Error("Sunucuya ulaşılamadı. İnternet bağlantını kontrol edip tekrar dene.");
+  }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error((data as { error?: string }).error ?? `Sunucu hatası (${response.status})`);
+  return data as IngredientExplanation;
+}

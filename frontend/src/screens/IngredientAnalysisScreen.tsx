@@ -1,8 +1,9 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { explainIngredient } from "../api";
 import { BackButton, PrimaryButton, Tag } from "../components/common";
 import { ingredientRoles } from "../ingredientInfo";
 import { lowerTr, parseIngredients } from "../ingredients";
@@ -11,6 +12,8 @@ import { colors, serif } from "../theme";
 
 const PREVIEW = 5;
 
+type Explanation = { state: "loading" } | { state: "done"; text: string } | { state: "error"; text: string };
+
 export function IngredientAnalysisScreen({ navigation, route }: NativeStackScreenProps<RootStackParamList, "IngredientAnalysis">) {
   const insets = useSafeAreaInsets();
   const { product, fromScan } = route.params;
@@ -18,6 +21,22 @@ export function IngredientAnalysisScreen({ navigation, route }: NativeStackScree
   const flaggedNames = new Set(product.flaggedIngredients.map((f) => lowerTr(f.inciName)));
   const [expanded, setExpanded] = useState(tokens.length <= PREVIEW + 1);
   const shown = expanded ? tokens : tokens.slice(0, PREVIEW);
+  const [open, setOpen] = useState<number | null>(null);
+  const [explained, setExplained] = useState<Record<string, Explanation>>({});
+
+  function toggle(index: number, name: string) {
+    if (open === index) {
+      setOpen(null);
+      return;
+    }
+    setOpen(index);
+    if (explained[name]?.state === "loading" || explained[name]?.state === "done") return;
+    setExplained((prev) => ({ ...prev, [name]: { state: "loading" } }));
+    explainIngredient(name).then(
+      (r) => setExplained((prev) => ({ ...prev, [name]: { state: "done", text: r.explanation } })),
+      (e: Error) => setExplained((prev) => ({ ...prev, [name]: { state: "error", text: e.message } }))
+    );
+  }
 
   function showResults() {
     if (fromScan) navigation.replace("ProductDetail", { barcode: product.barcode, product });
@@ -36,14 +55,15 @@ export function IngredientAnalysisScreen({ navigation, route }: NativeStackScree
 
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 110 + insets.bottom }]}>
         <Text style={styles.title}>{fromScan ? "Ürün içeriği okundu" : "Ürün içeriği"}</Text>
-        <Text style={styles.sub}>İçerikler analiz edildi. Sana en doğru sonuçları sunmak için değerlendirdik.</Text>
+        <Text style={styles.sub}>İçerikler analiz edildi. Bir maddenin ne işe yaradığını görmek için üstüne dokun.</Text>
 
         <View style={styles.list}>
           {shown.map((t, i) => {
             const roles = ingredientRoles(t);
             const flagged = flaggedNames.has(lowerTr(t));
+            const info = open === i ? explained[t] : undefined;
             return (
-              <View key={i} style={styles.row}>
+              <Pressable key={i} style={styles.row} onPress={() => toggle(i, t)}>
                 <Text style={styles.name}>{t}</Text>
                 <View style={styles.tags}>
                   {flagged && <Tag label="Dikkat" tone="orange" />}
@@ -51,7 +71,17 @@ export function IngredientAnalysisScreen({ navigation, route }: NativeStackScree
                     <Tag key={r} label={r} />
                   ))}
                 </View>
-              </View>
+                <Ionicons name={open === i ? "chevron-up" : "chevron-down"} size={16} color={colors.muted} style={styles.chevron} />
+                {info && (
+                  <View style={styles.explanation}>
+                    {info.state === "loading" ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <Text style={info.state === "error" ? styles.explanationError : styles.explanationText}>{info.text}</Text>
+                    )}
+                  </View>
+                )}
+              </Pressable>
             );
           })}
           {!expanded && (
@@ -82,6 +112,10 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 12, rowGap: 6, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12 },
   name: { fontSize: 15, fontWeight: "500", color: colors.text, minWidth: 110 },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, flexShrink: 1 },
+  chevron: { marginLeft: "auto" },
+  explanation: { width: "100%", paddingTop: 4 },
+  explanationText: { fontSize: 14, color: colors.text, lineHeight: 21 },
+  explanationError: { fontSize: 14, color: colors.muted, lineHeight: 21 },
   more: { justifyContent: "space-between" },
   moreText: { fontSize: 14, color: colors.text },
   footer: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 10, backgroundColor: colors.bg },

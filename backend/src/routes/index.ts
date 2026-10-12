@@ -3,6 +3,7 @@ import { analyzeRouter } from "./analyze";
 import { authRouter } from "./auth";
 import { contributionsRouter } from "./contributions";
 import { forumRouter } from "./forum";
+import { ingredientsRouter } from "./ingredients";
 import { productsRouter } from "./products";
 
 export const apiRouter = Router();
@@ -12,3 +13,4 @@ apiRouter.use("/contributions", contributionsRouter);
 apiRouter.use("/analyze", analyzeRouter);
 apiRouter.use("/forum", forumRouter);
 apiRouter.use("/auth", authRouter);
+apiRouter.use("/ingredients", ingredientsRouter);

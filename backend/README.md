@@ -10,7 +10,7 @@ npm install
 cp .env.example .env   # SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY değerlerini doldurun
 ```
 
-Veritabanı şemasını Supabase projenize sırayla uygulayın: `database/migrations/0001_init.sql`, sonra `0002_cosing.sql`.
+Veritabanı şemasını Supabase projenize sırayla uygulayın: `database/migrations/0001_init.sql`, sonra `0002_cosing.sql`, `0003_forum.sql` ve `0004_madde_aciklamalari.sql`.
 
 ## Çalıştırma
 
