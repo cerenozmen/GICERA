@@ -2,6 +2,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { Alert, Image, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AuthApiError } from "../authApi";
 import { useAuth } from "../AuthContext";
 import { PrimaryButton } from "../components/common";
 import { Field, FormMessage } from "../components/Field";
@@ -16,14 +17,19 @@ const LOGO = require("../../assets/logo-mark.jpg");
 
 type Mode = "login" | "signup";
 
-/** "Oturum açın veya kaydolun": e-mail + password (sign in / sign up) and Google. */
+/**
+ * "Oturum açın veya kaydolun": e-mail + password (sign in / sign up) and Google. A new account (or a
+ * sign-in to one not yet confirmed) waits for the link mailed to the address (it opens the app, signed in).
+ */
 export function AuthScreen({ navigation }: NativeStackScreenProps<RootStackParamList, "Auth">) {
   const insets = useSafeAreaInsets();
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, resendConfirmation, signInWithGoogle } = useAuth();
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  /** The address waiting for its confirmation link, while that step is shown. */
+  const [verifying, setVerifying] = useState<string | null>(null);
   const form = useSubmit();
   const google = useSubmit();
 
@@ -48,15 +54,44 @@ export function AuthScreen({ navigation }: NativeStackScreenProps<RootStackParam
         if (problem) throw new Error(problem);
         const { needsConfirmation } = await signUp(email.trim(), password);
         if (!needsConfirmation) return finish();
-        setPassword("");
-        setMode("login");
-        setNotice("Hesabın oluşturuldu. E-postana bir doğrulama bağlantısı gönderdik; onayladıktan sonra giriş yapabilirsin.");
+        awaitLink(email.trim(), "Hesabın oluşturuldu.");
         return;
       }
       if (!password) throw new Error("Şifreni gir.");
-      await signIn(email.trim(), password);
+      try {
+        await signIn(email.trim(), password);
+      } catch (err) {
+        // An account not confirmed yet (403): a fresh link is sent, and the step waits for it.
+        if (err instanceof AuthApiError && err.status === 403) {
+          await resendConfirmation(email.trim()).catch(() => {});
+          awaitLink(email.trim(), "E-postanı henüz doğrulamadın. Yeni bir bağlantı gönderdik.");
+          return;
+        }
+        throw err;
+      }
       finish();
     });
+  }
+
+  function awaitLink(address: string, message: string) {
+    setPassword("");
+    setVerifying(address);
+    setNotice(message);
+  }
+
+  function resend() {
+    setNotice(null);
+    form.run(async () => {
+      await resendConfirmation(verifying!);
+      setNotice("Yeni bir bağlantı gönderdik. Gelen kutunu (ve spam klasörünü) kontrol et.");
+    });
+  }
+
+  function backToSignIn() {
+    setVerifying(null);
+    setNotice(null);
+    setMode("login");
+    form.setError(null);
   }
 
   function continueWithGoogle() {
@@ -87,57 +122,76 @@ export function AuthScreen({ navigation }: NativeStackScreenProps<RootStackParam
           OTURUM AÇIN VEYA KAYDOLUN
         </Text>
 
-        <View style={styles.tabs}>
-          <Tab label="Giriş yap" active={mode === "login"} onPress={() => switchMode("login")} />
-          <Tab label="Kaydol" active={mode === "signup"} onPress={() => switchMode("signup")} />
-        </View>
-
-        <View style={styles.form}>
-          <Field
-            label="E-posta"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoComplete="email"
-            textContentType="emailAddress"
-            returnKeyType="next"
-          />
-          <Field
-            label="Şifre"
-            value={password}
-            onChangeText={setPassword}
-            secure
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            textContentType={mode === "login" ? "password" : "newPassword"}
-            hint={mode === "signup" ? PASSWORD_RULE.replace("Yeni parolanız", "Parolanız") : undefined}
-            returnKeyType="go"
-            onSubmitEditing={submit}
-          />
-          {/* The row keeps its height on "Kaydol" too, so the button sits at the same distance from the password on both tabs. */}
-          <View style={styles.forgotRow}>
-            {mode === "login" && (
-              <Pressable onPress={() => navigation.navigate("ForgotPassword", { email: email.trim() })} hitSlop={8}>
-                <Text style={styles.forgotText}>Şifremi unuttum</Text>
+        {verifying ? (
+          <>
+            <Text style={styles.codeInfo}>
+              <Text style={styles.codeEmail}>{verifying}</Text> adresine bir doğrulama bağlantısı gönderdik. E-postayı bu telefonda açıp bağlantıya
+              dokun; uygulama açılıp giriş yapacak.
+            </Text>
+            <FormMessage text={notice} tone="info" />
+            <FormMessage text={form.error} />
+            <PrimaryButton label={form.busy ? "Lütfen bekle…" : "Bağlantıyı tekrar gönder"} onPress={resend} disabled={form.busy} />
+            <View style={styles.codeLinks}>
+              <Pressable onPress={backToSignIn} hitSlop={8}>
+                <Text style={styles.forgotText}>Girişe dön</Text>
               </Pressable>
-            )}
-          </View>
-        </View>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.tabs}>
+              <Tab label="Giriş yap" active={mode === "login"} onPress={() => switchMode("login")} />
+              <Tab label="Kaydol" active={mode === "signup"} onPress={() => switchMode("signup")} />
+            </View>
 
-        <FormMessage text={notice} tone="info" />
-        <FormMessage text={form.error ?? google.error} />
+            <View style={styles.form}>
+              <Field
+                label="E-posta"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
+                returnKeyType="next"
+              />
+              <Field
+                label="Şifre"
+                value={password}
+                onChangeText={setPassword}
+                secure
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                textContentType={mode === "login" ? "password" : "newPassword"}
+                hint={mode === "signup" ? PASSWORD_RULE.replace("Yeni parolanız", "Parolanız") : undefined}
+                returnKeyType="go"
+                onSubmitEditing={submit}
+              />
+              {/* The row keeps its height on "Kaydol" too, so the button sits at the same distance from the password on both tabs. */}
+              <View style={styles.forgotRow}>
+                {mode === "login" && (
+                  <Pressable onPress={() => navigation.navigate("ForgotPassword", { email: email.trim() })} hitSlop={8}>
+                    <Text style={styles.forgotText}>Şifremi unuttum</Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
 
-        <PrimaryButton label={form.busy ? "Lütfen bekle…" : mode === "login" ? "Giriş yap" : "Hesap oluştur"} onPress={submit} disabled={busy} />
+            <FormMessage text={notice} tone="info" />
+            <FormMessage text={form.error ?? google.error} />
 
-        <View style={styles.or}>
-          <View style={styles.rule} />
-          <Text style={styles.orText}>veya</Text>
-          <View style={styles.rule} />
-        </View>
+            <PrimaryButton label={form.busy ? "Lütfen bekle…" : mode === "login" ? "Giriş yap" : "Hesap oluştur"} onPress={submit} disabled={busy} />
 
-        <Pressable style={[styles.google, busy && { opacity: 0.5 }]} onPress={continueWithGoogle} disabled={busy}>
-          <GoogleLogo size={20} />
-          <Text style={styles.googleText}>{google.busy ? "Lütfen bekle…" : "Google ile devam et"}</Text>
-        </Pressable>
+            <View style={styles.or}>
+              <View style={styles.rule} />
+              <Text style={styles.orText}>veya</Text>
+              <View style={styles.rule} />
+            </View>
+
+            <Pressable style={[styles.google, busy && { opacity: 0.5 }]} onPress={continueWithGoogle} disabled={busy}>
+              <GoogleLogo size={20} />
+              <Text style={styles.googleText}>{google.busy ? "Lütfen bekle…" : "Google ile devam et"}</Text>
+            </Pressable>
+          </>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -166,6 +220,9 @@ const styles = StyleSheet.create({
   form: { gap: 20 },
   forgotRow: { alignItems: "flex-end", justifyContent: "center", minHeight: 20 },
   forgotText: { fontSize: 13.5, color: colors.primary },
+  codeInfo: { fontSize: 14, color: colors.text, lineHeight: 21 },
+  codeEmail: { fontWeight: "600" },
+  codeLinks: { flexDirection: "row", justifyContent: "space-between" },
   or: { flexDirection: "row", alignItems: "center", gap: 12 },
   rule: { flex: 1, height: 1, backgroundColor: colors.border },
   orText: { fontSize: 12, color: colors.muted, letterSpacing: 1 },

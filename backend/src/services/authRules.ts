@@ -18,7 +18,7 @@ const SESSION_ENDED = "Oturumun sona ermiş. Tekrar giriş yap.";
 /** Supabase error codes -> the Turkish line the app shows (status picks 4xx over a generic 500). */
 const MESSAGES: Record<string, { status: number; message: string }> = {
   invalid_credentials: { status: 401, message: "E-posta veya şifre hatalı." },
-  email_not_confirmed: { status: 403, message: "E-postanı henüz doğrulamadın. Gelen kutundaki bağlantıya dokun." },
+  email_not_confirmed: { status: 403, message: "E-postanı henüz doğrulamadın. E-postana gelen bağlantıya bu telefondan dokun." },
   user_already_exists: { status: 409, message: "Bu e-posta ile zaten bir hesap var. Giriş yapmayı dene." },
   email_exists: { status: 409, message: "Bu e-posta ile zaten bir hesap var." },
   weak_password: { status: 400, message: "Bu şifre çok kolay tahmin edilebilir. Daha güçlü bir şifre seç." },

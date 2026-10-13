@@ -1,5 +1,9 @@
-/** What the app was opened with by the "şifreni yenile" e-mail link. */
-export type RecoveryLink = { accessToken: string; refreshToken: string } | { failed: true };
+/**
+ * What the app was opened with by an e-mailed link: "şifreni yenile" (a session for setting a new password)
+ * or the sign-up confirmation (`signup`: the address is confirmed, the session signs in). Supabase only
+ * redirects to this one address, so both land here.
+ */
+export type RecoveryLink = { accessToken: string; refreshToken: string; signup?: true } | { failed: true };
 
 /** The address the e-mailed link ends at; the backend asks Supabase to redirect here, AndroidManifest claims it. */
 export const RECOVERY_URL = "gicera://reset-password";
@@ -27,6 +31,9 @@ export function parseRecoveryLink(url: string | null): RecoveryLink | null {
 
   if (params.access_token && params.refresh_token && (params.type === undefined || params.type === "recovery")) {
     return { accessToken: params.access_token, refreshToken: params.refresh_token };
+  }
+  if (params.access_token && params.refresh_token && params.type === "signup") {
+    return { accessToken: params.access_token, refreshToken: params.refresh_token, signup: true };
   }
   if (params.error || params.error_code) return { failed: true };
   return null;

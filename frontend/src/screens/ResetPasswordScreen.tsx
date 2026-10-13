@@ -1,6 +1,6 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { Alert, StyleSheet, Text } from "react-native";
+import { Alert, Pressable, StyleSheet, Text } from "react-native";
 import { useAuth } from "../AuthContext";
 import { PrimaryButton } from "../components/common";
 import { Field, FormMessage, FormPage } from "../components/Field";
@@ -25,8 +25,11 @@ export function ResetPasswordScreen({ navigation, route }: NativeStackScreenProp
   if (failed || !accessToken || !refreshToken) {
     return (
       <FormPage title="Şifreni yenile" onBack={leave}>
-        <FormMessage text="Bağlantının süresi dolmuş veya daha önce kullanılmış. Yeni bir bağlantı isteyebilirsin." />
+        <FormMessage text="Bağlantının süresi dolmuş veya daha önce kullanılmış. E-postanı doğrulamak için açtıysan giriş yapmayı dene; şifreni yenilemek için yeni bir bağlantı isteyebilirsin." />
         <PrimaryButton label="Yeni bağlantı iste" onPress={() => navigation.replace("ForgotPassword")} />
+        <Pressable onPress={() => navigation.replace("Auth")} hitSlop={8}>
+          <Text style={styles.link}>Giriş yap</Text>
+        </Pressable>
       </FormPage>
     );
   }
@@ -84,4 +87,5 @@ export function ResetPasswordScreen({ navigation, route }: NativeStackScreenProp
 
 const styles = StyleSheet.create({
   text: { fontSize: 14.5, color: colors.muted, lineHeight: 21 },
+  link: { fontSize: 14.5, color: colors.primary, textAlign: "center" },
 });

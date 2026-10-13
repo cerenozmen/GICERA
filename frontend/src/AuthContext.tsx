@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AuthApiError, authApi, AuthResult, AuthUser } from "./authApi";
 import { getGoogleIdToken, googleSignOut } from "./google";
-import { StoredAuth, storage } from "./storage";
+import { SkinProfile, StoredAuth, storage } from "./storage";
 
 /** Refresh a little before the access token runs out. */
 const EXPIRY_MARGIN_S = 60;
@@ -13,6 +13,9 @@ interface AuthState {
   user: AuthUser | null;
   /** `needsConfirmation`: the account exists but must confirm its e-mail before signing in. */
   signUp: (email: string, password: string) => Promise<{ needsConfirmation: boolean }>;
+  /** Signs in with the session the sign-up confirmation link opened the app with. */
+  signInWithLink: (refreshToken: string) => Promise<void>;
+  resendConfirmation: (email: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   /** false when the user closed Google's picker. */
   signInWithGoogle: () => Promise<boolean>;
@@ -21,6 +24,8 @@ interface AuthState {
   signOut: () => void;
   refreshUser: () => Promise<void>;
   updateName: (firstName: string, lastName: string) => Promise<void>;
+  /** Keeps the skin quiz's answers with the account. */
+  saveSkinProfile: (profile: SkinProfile) => Promise<void>;
   changeEmail: (currentPassword: string, newEmail: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
@@ -107,6 +112,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [accept]
   );
 
+  const signInWithLink = useCallback<AuthState["signInWithLink"]>(async (refreshToken) => accept(await authApi.refresh(refreshToken)), [accept]);
+
+  const resendConfirmation = useCallback<AuthState["resendConfirmation"]>(async (email) => {
+    await authApi.resend(email);
+  }, []);
+
   const signIn = useCallback<AuthState["signIn"]>(async (email, password) => accept(await authApi.signIn(email, password)), [accept]);
 
   const signInWithGoogle = useCallback<AuthState["signInWithGoogle"]>(async () => {
@@ -146,6 +157,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [authed, setUser]
   );
 
+  const saveSkinProfile = useCallback<AuthState["saveSkinProfile"]>(
+    async (profile) => setUser((await authed((token) => authApi.updateSkinProfile(token, profile))).user),
+    [authed, setUser]
+  );
+
   const changeEmail = useCallback<AuthState["changeEmail"]>(
     async (currentPassword, newEmail) => {
       await authed((token) => authApi.changeEmail(token, currentPassword, newEmail));
@@ -165,16 +181,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       user: stored?.user ?? null,
       signUp,
+      signInWithLink,
+      resendConfirmation,
       signIn,
       signInWithGoogle,
       resetPassword,
       signOut,
       refreshUser,
       updateName,
+      saveSkinProfile,
       changeEmail,
       changePassword,
     }),
-    [ready, stored, signUp, signIn, signInWithGoogle, resetPassword, signOut, refreshUser, updateName, changeEmail, changePassword]
+    [ready, stored, signUp, signInWithLink, resendConfirmation, signIn, signInWithGoogle, resetPassword, signOut, refreshUser, updateName, saveSkinProfile, changeEmail, changePassword]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -3,11 +3,25 @@ import { env } from "../config/env";
 import { supabase as admin } from "../db/supabaseClient";
 import { AuthFailure, cleanName, isRecoveryToken, toAuthFailure } from "./authRules";
 
+/** The skin quiz's answers (the app's SkinProfile), kept with the account so they follow the user. */
+export interface SkinProfile {
+  skinType: string | null;
+  concerns: string[];
+  reactionFrequency: string | null;
+  sunBurns: string | null;
+  ageRange: string | null;
+  routineLevel: string | null;
+  pregnant: string | null;
+  skinCondition: string | null;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
+  /** Null until the account has taken the skin quiz. */
+  skinProfile: SkinProfile | null;
 }
 
 export interface AuthSession {
@@ -41,6 +55,7 @@ function toUser(user: User): AuthUser {
     email: user.email ?? "",
     firstName: typeof meta.first_name === "string" ? meta.first_name : googleFirst,
     lastName: typeof meta.last_name === "string" ? meta.last_name : googleRest.join(" "),
+    skinProfile: meta.skin_profile && typeof meta.skin_profile === "object" ? (meta.skin_profile as SkinProfile) : null,
   };
 }
 
@@ -59,9 +74,15 @@ function unwrap<T extends { error: { code?: string; status?: number; message?: s
 }
 
 export async function signUp(email: string, password: string): Promise<AuthResult> {
-  const { data } = unwrap(await client().auth.signUp({ email, password }));
+  const { data } = unwrap(await client().auth.signUp({ email, password, options: { emailRedirectTo: RECOVERY_REDIRECT } }));
   if (!data.user) throw new AuthFailure(502, "Hesap oluşturulamadı. Tekrar dene.");
   return { user: toUser(data.user), session: toSession(data.session) };
+}
+
+/** Mails the sign-up confirmation link again. Quiet when there is nothing to confirm, so it can't be used to find out who has an account. */
+export async function resendConfirmation(email: string): Promise<void> {
+  const { error } = await client().auth.resend({ type: "signup", email, options: { emailRedirectTo: RECOVERY_REDIRECT } });
+  if (error && (error.status === 429 || error.code?.startsWith("over_"))) throw toAuthFailure(error);
 }
 
 export async function signIn(email: string, password: string): Promise<AuthResult> {
@@ -89,7 +110,11 @@ export async function userFromToken(accessToken: string): Promise<AuthUser> {
   return toUser(data.user);
 }
 
-/** Where the e-mailed link lands: the app's own scheme (declared in AndroidManifest). Must be in Supabase's Redirect URLs. */
+/**
+ * Where the e-mailed links land: the app's own scheme (declared in AndroidManifest). Supabase's Redirect URLs
+ * allow exactly this address (anything else falls back to the Site URL, localhost), so the sign-up
+ * confirmation link lands here too; the app tells the two apart by the link's `type`.
+ */
 export const RECOVERY_REDIRECT = "gicera://reset-password";
 
 const LINK_INVALID = "Bağlantının süresi dolmuş veya geçersiz. Yeni bir bağlantı iste.";
@@ -121,6 +146,16 @@ export async function updateName(accessToken: string, firstName: string, lastNam
     })
   );
   if (!data.user) throw new AuthFailure(502, "Bilgiler kaydedilemedi.");
+  return toUser(data.user);
+}
+
+/** Saves the skin quiz's answers on the account (user metadata, alongside the name). */
+export async function updateSkinProfile(accessToken: string, profile: SkinProfile): Promise<AuthUser> {
+  const current = await userFromToken(accessToken);
+  const { data: existing } = await admin.auth.admin.getUserById(current.id);
+  const meta = (existing.user?.user_metadata ?? {}) as Record<string, unknown>;
+  const { data } = unwrap(await admin.auth.admin.updateUserById(current.id, { user_metadata: { ...meta, skin_profile: profile } }));
+  if (!data.user) throw new AuthFailure(502, "Cilt profili kaydedilemedi.");
   return toUser(data.user);
 }
 

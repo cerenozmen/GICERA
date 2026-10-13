@@ -25,7 +25,8 @@ interface AppState {
   clearHistory: () => void;
   updateSettings: (patch: Partial<Settings>) => void;
   markWelcomeSeen: () => void;
-  saveSkinProfile: (profile: SkinProfile) => void;
+  /** Saves the profile on this phone (null clears it); SkinProfileSync keeps it with the signed-in account. */
+  saveSkinProfile: (profile: SkinProfile | null) => void;
   toggleRoutineStep: (step: string) => void;
   setRoutineProduct: (step: string, product: Product) => void;
   saveNickname: (name: string) => void;
@@ -103,7 +104,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     storage.saveWelcomeSeen();
   }, []);
 
-  const saveSkinProfile = useCallback((profile: SkinProfile) => {
+  const saveSkinProfile = useCallback((profile: SkinProfile | null) => {
     setSkinProfile(profile);
     storage.saveSkinProfile(profile);
   }, []);

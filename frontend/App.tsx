@@ -1,29 +1,40 @@
 import { createNavigationContainerRef, DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { useEffect, useRef } from "react";
-import { Linking, StatusBar, View } from "react-native";
+import { Alert, Linking, StatusBar, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppProvider, useApp } from "./src/AppContext";
 import { AuthProvider, useAuth } from "./src/AuthContext";
 import { RootStackParamList } from "./src/navigation/types";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { parseRecoveryLink, RecoveryLink } from "./src/recoveryLink";
+import { SkinProfileSync } from "./src/SkinProfileSync";
 import { colors } from "./src/theme";
 
 const navTheme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.bg } };
 
 const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
-function openRecovery(link: RecoveryLink) {
-  navigationRef.navigate("ResetPassword", "failed" in link ? { failed: true } : link);
-}
-
 function Root() {
   const { ready: appReady } = useApp();
-  const { ready: authReady } = useAuth();
+  const { ready: authReady, signInWithLink } = useAuth();
   // A link that opened the app before the navigator existed waits here.
   const pending = useRef<RecoveryLink | null>(null);
 
-  // The e-mailed password-reset link (gicera://reset-password#…): cold start and while the app is open.
+  /** The password-reset link opens its screen; the sign-up confirmation link signs in and goes home. */
+  const openLink = useRef<(link: RecoveryLink) => void>(() => {});
+  openLink.current = (link) => {
+    if ("signup" in link) {
+      signInWithLink(link.refreshToken).then(
+        () => navigationRef.reset({ index: 0, routes: [{ name: "Main" }] }),
+        (err: Error) => Alert.alert("Giriş yapılamadı", `${err.message} E-postan doğrulandı; e-posta ve şifrenle giriş yapabilirsin.`)
+      );
+      return;
+    }
+    navigationRef.navigate("ResetPassword", "failed" in link ? { failed: true } : link);
+  };
+  const openRecovery = (link: RecoveryLink) => openLink.current(link);
+
+  // The e-mailed links (gicera://reset-password#…): cold start and while the app is open.
   useEffect(() => {
     const handle = (url: string | null) => {
       const link = parseRecoveryLink(url);
@@ -57,6 +68,7 @@ export default function App() {
       <AppProvider>
         <AuthProvider>
           <Root />
+          <SkinProfileSync />
           <StatusBar barStyle="dark-content" />
         </AuthProvider>
       </AppProvider>

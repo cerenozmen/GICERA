@@ -29,11 +29,23 @@ const permanentEmail = email.refine((value) => !isDisposableEmail(value), { mess
 
 const credentialsBody = z.object({ email: permanentEmail, password });
 const loginBody = z.object({ email, password: z.string().min(1, "Şifreni gir.").max(PASSWORD_MAX) });
+const resendBody = z.object({ email });
 const googleBody = z.object({ idToken: z.string().min(20).max(4096) });
 const refreshBody = z.object({ refreshToken: z.string().min(5).max(512) });
 const forgotBody = z.object({ email });
 const recoveryBody = z.object({ accessToken: z.string().min(20).max(4096), refreshToken: z.string().min(5).max(512), password });
 const profileBody = z.object({ firstName: name, lastName: name });
+const answer = z.string().trim().max(60).nullable();
+const skinProfileBody = z.object({
+  skinType: answer,
+  concerns: z.array(z.string().trim().max(60)).max(12),
+  reactionFrequency: answer,
+  sunBurns: answer,
+  ageRange: answer,
+  routineLevel: answer,
+  pregnant: answer,
+  skinCondition: answer,
+});
 const emailBody = z.object({ currentPassword, newEmail: permanentEmail });
 const passwordBody = z.object({ currentPassword, newPassword: password });
 
@@ -64,6 +76,17 @@ authRouter.post(
     if (!body || tooMany(res, allowAttempt(`signup:${req.ip}`))) return;
     const result = await auth.signUp(body.email, body.password);
     res.status(201).json({ ...result, needsConfirmation: result.session === null });
+  })
+);
+
+// The sign-up confirmation link, mailed again.
+authRouter.post(
+  "/resend",
+  asyncHandler(async (req, res) => {
+    const body = parse(resendBody, req, res);
+    if (!body || tooMany(res, allowMail(`resend:${req.ip}:${body.email}`))) return;
+    await auth.resendConfirmation(body.email);
+    res.json({ ok: true });
   })
 );
 
@@ -129,6 +152,16 @@ authRouter.patch(
     const body = accessToken ? parse(profileBody, req, res) : null;
     if (!accessToken || !body) return;
     res.json({ user: await auth.updateName(accessToken, body.firstName, body.lastName) });
+  })
+);
+
+authRouter.put(
+  "/skin-profile",
+  asyncHandler(async (req, res) => {
+    const accessToken = token(req, res);
+    const body = accessToken ? parse(skinProfileBody, req, res) : null;
+    if (!accessToken || !body) return;
+    res.json({ user: await auth.updateSkinProfile(accessToken, body) });
   })
 );
 
