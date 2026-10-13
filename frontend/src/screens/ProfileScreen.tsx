@@ -114,6 +114,7 @@ export function ProfileScreen({ navigation }: Props) {
           onPress={() => navigation.navigate("PregnancyMode")}
           divider
         />
+        <MenuRow icon="sparkles-outline" label="Tanıtımı tekrar göster" onPress={() => navigation.navigate("Welcome")} divider />
         <MenuRow icon="trash-outline" label="Tarama geçmişini sil" onPress={confirmClearHistory} divider />
         {user && <MenuRow icon="log-out-outline" label="Çıkış yap" onPress={confirmSignOut} divider />}
       </View>

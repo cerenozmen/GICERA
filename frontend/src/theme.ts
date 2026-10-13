@@ -27,6 +27,9 @@ export const LOGO_BG = "#FBF4ED";
 
 export const serif =Platform.select({ ios: "Georgia", default: "serif" });
 
+/** The intro's display serif (DM Serif Display, SIL OFL; android/app/src/main/assets/fonts). */
+export const display = Platform.select({ android: "DMSerifDisplay-Regular", default: serif });
+
 export const ratingStyle: Record<CleanRating, { label: string; color: string; bg: string }> = {
   clean: { label: "Temiz Ürün", color: colors.primary, bg: colors.primaryLight },
   moderate: { label: "Orta", color: colors.warning, bg: colors.warningLight },

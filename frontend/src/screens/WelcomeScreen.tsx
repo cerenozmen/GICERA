@@ -1,98 +1,151 @@
-import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useRef } from "react";
+import { ReactNode, useRef, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../AppContext";
 import { useAuth } from "../AuthContext";
 import { PrimaryButton } from "../components/common";
 import { RootStackParamList } from "../navigation/types";
-import { colors, LOGO_BG, serif } from "../theme";
+import { colors, display } from "../theme";
 
-const LOGO = require("../../assets/logo-mark.jpg");
+/**
+ * The intro's two pages: the designed artwork (upscaled, its words taken out) filling the whole screen,
+ * with the words set as live text where the design has them, so they stay sharp on any screen. The
+ * buttons sit on the artwork's lower edge, over a fade into its own cream.
+ */
+const PAGES = [
+  { image: require("../../assets/welcome-brand.jpg"), ratio: 2650 / 1440 },
+  { image: require("../../assets/welcome-promise.jpg"), ratio: 2663 / 1440 },
+];
+const FADE = require("../../assets/welcome-fade.png");
+
+const INK = "#10241E";
+const CREAM = "#F6EDE4";
 
 /** The intro's dots also count the quiz that follows. */
 const DOTS = 4;
+/** Height of the second page's actions: a button, "Şimdilik geç" and the dots, with their gaps. */
+const ACTIONS_TWO = 56 + 14 + 20 + 14 + 7;
+
+/** Where an artwork lands when it covers the screen: its size and offset (its sides may be cut). */
+interface Cover {
+  width: number;
+  height: number;
+  left: number;
+  top: number;
+}
+
+function cover(ratio: number, screenWidth: number, screenHeight: number): Cover {
+  const width = Math.max(screenWidth, screenHeight / ratio);
+  const height = width * ratio;
+  // Wider than the screen: centred, its sides cut. Taller: kept from the top, the plain cream below cut.
+  return { width, height, left: (screenWidth - width) / 2, top: 0 };
+}
 
 export function WelcomeScreen({ navigation }: NativeStackScreenProps<RootStackParamList, "Welcome">) {
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
+  const window = useWindowDimensions();
   const { markWelcomeSeen } = useApp();
   const { user } = useAuth();
   const scroller = useRef<ScrollView>(null);
+  // The screen the pages fill (the window, edge to edge; measured once laid out).
+  const [screen, setScreen] = useState({ width: window.width, height: window.height });
 
   function skip() {
     markWelcomeSeen();
     navigation.reset({ index: 0, routes: [{ name: user ? "Main" : "Auth" }] });
   }
 
-  const logoWidth = Math.min(width * 0.78, 340);
+  function startQuiz() {
+    markWelcomeSeen();
+    navigation.replace("SkinQuiz");
+  }
+
+  const { width, height } = screen;
+  const brand = cover(PAGES[0].ratio, width, height);
+  const promise = cover(PAGES[1].ratio, width, height);
+  const headline = Math.min(36, width * 0.088);
 
   return (
-    <View style={styles.screen}>
-      <ScrollView ref={scroller} horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
-        {/* 1: brand */}
-        <View style={[styles.page, styles.brandPage, { width, paddingTop: insets.top + 12 }]}>
-          <View style={[styles.glow, { width: width * 1.2, height: width * 1.2, top: height * 0.3, left: -width * 0.1 }]} />
-          <Bubble size={22} style={{ top: insets.top + 70, left: 34 }} />
-          <Bubble size={12} style={{ top: insets.top + 110, left: 64 }} />
-          <Bubble size={64} style={{ bottom: 190, right: 30 }} />
-          <Bubble size={18} style={{ bottom: 270, left: 40 }} />
+    <View style={styles.screen} onLayout={(e) => setScreen({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}>
+      <ScrollView ref={scroller} horizontal pagingEnabled showsHorizontalScrollIndicator={false} bounces={false}>
+        <Page
+          width={width}
+          height={height}
+          image={PAGES[0].image}
+          art={brand}
+          bottomInset={insets.bottom}
+          actions={
+            <>
+              <PrimaryButton label="Hemen Başla" arrow onPress={() => scroller.current?.scrollTo({ x: width, animated: true })} />
+              <Dots page={0} />
+            </>
+          }
+        >
+          {/* Where the design has them: the name's middle at 43% of the artwork's height, the motto's at 52%. */}
+          <Words art={brand} screenWidth={width} at={0.427} height={0.2} side={0.12}>
+            <Text style={[styles.brandName, { fontSize: brand.width * 0.18, lineHeight: brand.width * 0.2 }]} numberOfLines={1} adjustsFontSizeToFit>
+              Gicera
+            </Text>
+          </Words>
+          <Words art={brand} screenWidth={width} at={0.521} height={0.11} side={0.12}>
+            <Text style={[styles.motto, { fontSize: brand.width * 0.034, lineHeight: brand.width * 0.055, letterSpacing: brand.width * 0.0055 }]}>
+              {"İÇERİĞİNİ BİL.\nKENDİNE İYİ BAK."}
+            </Text>
+          </Words>
+        </Page>
 
-          <View style={styles.brand}>
-            <Image source={LOGO} style={{ width: logoWidth, height: logoWidth * (775 / 820) }} resizeMode="contain" />
-            <Text style={styles.logo}>Gicera</Text>
-            <Text style={styles.motto}>İÇERİĞİNİ BİL,{"\n"}KENDİNE İYİ BAK.</Text>
-          </View>
-          <View style={[styles.bottom, { paddingBottom: insets.bottom + 20 }]}>
-            <PrimaryButton label="Hemen Başla" arrow onPress={() => scroller.current?.scrollTo({ x: width, animated: true })} />
-            <Dots page={0} />
-          </View>
-        </View>
-
-        {/* 2: promise */}
-        <View style={[styles.page, { width }]}>
-          <View style={[styles.hero, { height: height * 0.5, paddingTop: insets.top }]}>
-            <Ionicons name="leaf" size={150} color="#5E7F55" style={styles.heroLeafA} />
-            <Ionicons name="leaf" size={120} color="#EDB09B" style={styles.heroLeafB} />
-            <Ionicons name="leaf" size={110} color="#7E9A6E" style={styles.heroLeafC} />
-            <View style={styles.sphere}>
-              <View style={styles.sphereShine} />
-              <Ionicons name="leaf" size={64} color="rgba(94,127,85,0.55)" style={styles.sphereLeaf} />
-            </View>
-            <Bubble size={26} style={{ top: insets.top + 40, right: 60 }} />
-            <Bubble size={14} style={{ top: insets.top + 90, left: 50 }} />
-          </View>
-          <View style={styles.copy}>
-            <Text style={styles.headline}>Cildini tanı,{"\n"}rutinini sadeleştir.</Text>
+        <Page
+          width={width}
+          height={height}
+          image={PAGES[1].image}
+          art={promise}
+          bottomInset={insets.bottom}
+          actions={
+            <>
+              <PrimaryButton label="Cilt Profili Oluştur" arrow onPress={startQuiz} />
+              <Pressable onPress={skip} hitSlop={8}>
+                <Text style={styles.skip}>Şimdilik geç</Text>
+              </Pressable>
+              <Dots page={1} />
+            </>
+          }
+        >
+          {/* Set for the phone, not the artwork: in from the sides, a clear gap above the buttons. */}
+          <View style={[styles.promiseCopy, { bottom: insets.bottom + 18 + ACTIONS_TWO + 34 }]}>
+            <Text style={[styles.headline, { fontSize: headline, lineHeight: headline * 1.15 }]} numberOfLines={2} adjustsFontSizeToFit>
+              {"Cildini tanı,\nrutinini sadeleştir."}
+            </Text>
             <Text style={styles.body}>Cilt tipini öğren, ihtiyaçlarına uygun içerikleri keşfet ve sana en uygun bakım rutinini oluştur.</Text>
           </View>
-          <View style={[styles.bottom, styles.pad, { paddingBottom: insets.bottom + 20 }]}>
-            <PrimaryButton
-              label="Cilt Profili Oluştur"
-              arrow
-              onPress={() => {
-                markWelcomeSeen();
-                navigation.replace("SkinQuiz");
-              }}
-            />
-            <Pressable onPress={skip} hitSlop={8}>
-              <Text style={styles.skip}>Şimdilik geç</Text>
-            </Pressable>
-            <Dots page={0} />
-          </View>
-        </View>
+        </Page>
       </ScrollView>
     </View>
   );
 }
 
-function Bubble({ size, style }: { size: number; style: object }) {
+/** One intro page: the artwork covering the screen, its words laid on it, the buttons over a fade at the bottom. */
+function Page(props: { width: number; height: number; image: number; art: Cover; bottomInset: number; actions: ReactNode; children: ReactNode }) {
+  const { art } = props;
   return (
-    <View style={[styles.bubble, { width: size, height: size, borderRadius: size / 2 }, style]}>
-      <View style={[styles.bubbleShine, { width: size * 0.3, height: size * 0.3, borderRadius: size * 0.15 }]} />
+    <View style={[styles.page, { width: props.width, height: props.height }]}>
+      <Image source={props.image} style={[styles.abs, art]} resizeMode="cover" />
+      {props.children}
+      <Image source={FADE} style={[styles.fade, { height: 150 + props.bottomInset + 110 }]} resizeMode="stretch" />
+      <View style={[styles.actions, { paddingBottom: props.bottomInset + 18 }]}>{props.actions}</View>
     </View>
   );
+}
+
+/**
+ * A block of words centred at `at` of the artwork's height, `height` tall and `side` in from each side
+ * (both as shares of the artwork's width), kept on screen where the artwork's sides are cut.
+ */
+function Words(props: { art: Cover; screenWidth: number; at: number; height: number; side: number; children: ReactNode }) {
+  const { art } = props;
+  const h = art.width * props.height;
+  const inset = Math.max(16, art.left + art.width * props.side);
+  return <View style={[styles.words, { top: art.top + art.height * props.at - h / 2, height: h, left: inset, right: inset }]}>{props.children}</View>;
 }
 
 function Dots({ page }: { page: number }) {
@@ -106,29 +159,19 @@ function Dots({ page }: { page: number }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: LOGO_BG },
-  page: { flex: 1, overflow: "hidden" },
-  brandPage: { paddingHorizontal: 24, backgroundColor: LOGO_BG },
-  pad: { paddingHorizontal: 24 },
-  glow: { position: "absolute", borderRadius: 999, backgroundColor: "#F8E3D8", opacity: 0.6 },
-  bubble: { position: "absolute", backgroundColor: "rgba(246,214,200,0.45)", borderWidth: 1, borderColor: "rgba(255,255,255,0.9)" },
-  bubbleShine: { position: "absolute", top: "18%", left: "22%", backgroundColor: "rgba(255,255,255,0.9)" },
-  brand: { flex: 1, alignItems: "center", justifyContent: "center" },
-  logo: { fontFamily: serif, fontSize: 54, color: colors.primary, marginTop: -6 },
-  motto: { fontSize: 12, letterSpacing: 4, color: colors.text, textAlign: "center", marginTop: 8, lineHeight: 19 },
-  bottom: { gap: 16 },
+  screen: { flex: 1, backgroundColor: CREAM },
+  page: { overflow: "hidden", backgroundColor: CREAM },
+  abs: { position: "absolute" },
+  words: { position: "absolute", justifyContent: "center" },
+  brandName: { fontFamily: display, color: INK, textAlign: "center" },
+  motto: { color: "#2F4640", textAlign: "center", fontWeight: "500" },
+  promiseCopy: { position: "absolute", left: 28, right: 28, alignItems: "center", gap: 14 },
+  headline: { fontFamily: display, color: INK, textAlign: "center" },
+  body: { color: "#55605E", textAlign: "center", fontSize: 15.5, lineHeight: 23, maxWidth: 330 },
+  fade: { position: "absolute", left: 0, right: 0, bottom: 0, width: "100%" },
+  actions: { position: "absolute", left: 0, right: 0, bottom: 0, gap: 14, paddingHorizontal: 24 },
   dots: { flexDirection: "row", justifyContent: "center", gap: 7 },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#D8D2C8" },
   dotOn: { backgroundColor: colors.primary },
-  hero: { backgroundColor: "#F3DDD2", alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  heroLeafA: { position: "absolute", top: 30, left: -30, transform: [{ rotate: "-40deg" }] },
-  heroLeafB: { position: "absolute", bottom: -10, left: 30, transform: [{ rotate: "200deg" }] },
-  heroLeafC: { position: "absolute", top: 60, right: -20, transform: [{ rotate: "50deg" }] },
-  sphere: { width: 170, height: 170, borderRadius: 85, backgroundColor: "rgba(255,255,255,0.35)", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.95)", alignItems: "center", justifyContent: "center", marginTop: 30 },
-  sphereShine: { position: "absolute", top: 22, left: 34, width: 40, height: 22, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.8)", transform: [{ rotate: "-30deg" }] },
-  sphereLeaf: { transform: [{ rotate: "30deg" }] },
-  copy: { flex: 1, alignItems: "center", justifyContent: "center", gap: 14, paddingHorizontal: 28 },
-  headline: { fontFamily: serif, fontSize: 32, color: colors.text, textAlign: "center", lineHeight: 40 },
-  body: { fontSize: 15, color: colors.muted, textAlign: "center", lineHeight: 22 },
   skip: { color: colors.muted, textAlign: "center", fontSize: 14 },
 });
