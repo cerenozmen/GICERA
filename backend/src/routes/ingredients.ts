@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { createRateLimiter } from "../services/forumRules";
+import { describeIngredients } from "../services/ingredientDetails";
 import { ExplanationUnavailableError, explainIngredient } from "../services/ingredientExplanationService";
 import { asyncHandler } from "../utils/asyncHandler";
 
@@ -42,3 +43,19 @@ ingredientsRouter.get(
     }
   })
 );
+
+const detailsSchema = z.object({
+  ingredients: z.array(z.string().max(300)).max(300),
+  flagged: z.array(z.string().max(200)).max(100).default([]),
+});
+
+// POST /api/ingredients/details { ingredients: the list's rows, flagged: the product's flagged INCI names }
+// -> per row: its INCI name, what it does (Turkish tags), which flagged substances it is.
+ingredientsRouter.post("/details", (req, res) => {
+  const parsed = detailsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Geçersiz istek." });
+    return;
+  }
+  res.json(describeIngredients(parsed.data.ingredients, parsed.data.flagged));
+});

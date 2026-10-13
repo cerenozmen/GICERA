@@ -9,8 +9,10 @@ import { useApp } from "../AppContext";
 import { BackButton, EmptyState, PrimaryButton, Thumb } from "../components/common";
 import { FixIngredients } from "../components/FixIngredients";
 import { ProgressRing } from "../components/ProgressRing";
+import { ExplainButton, ExplanationText, useExplanations } from "../components/Explanation";
 import { isBeneficial } from "../ingredientInfo";
-import { freeFromChecks, parseIngredients, resultState, summaryText } from "../ingredients";
+import { skinFit } from "../skinFit";
+import { freeFromChecks, lowerTr, parseIngredients, resultState, summaryText } from "../ingredients";
 import { RootStackParamList } from "../navigation/types";
 import { Period, ROUTINES } from "../routine";
 import { colors, serif } from "../theme";
@@ -221,12 +223,12 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
           ))}
         </View>
 
+        <SkinFitCard ingredients={tokens} onQuiz={() => navigation.navigate("SkinQuiz", { edit: true })} />
+
         {product.flaggedIngredients.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Dikkat edilmesi gerekenler</Text>
-            {product.flaggedIngredients.map((item, i) => (
-              <FlaggedRow key={i} item={item} divider={i > 0} />
-            ))}
+            <FlaggedList items={product.flaggedIngredients} />
           </View>
         )}
 
@@ -325,20 +327,87 @@ function LinkRow({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
-function FlaggedRow({ item, divider }: { item: FlaggedIngredient; divider?: boolean }) {
+/**
+ * "Cildine uygunluk": the ingredients that may not suit the user's skin profile and those that tend to
+ * help it (skinFit.ts). Separate from the score, which is the same for everyone.
+ */
+function SkinFitCard({ ingredients, onQuiz }: { ingredients: string[]; onQuiz: () => void }) {
+  const { skinProfile } = useApp();
+  const fit = skinFit(skinProfile, ingredients);
+  if (!fit) {
+    return (
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Cildine uygunluk</Text>
+        <Text style={styles.reasonText}>Bu ürünün cildine uyup uymadığını görmek için kısa cilt testini tamamla.</Text>
+        <Pressable onPress={onQuiz} hitSlop={8}>
+          <Text style={styles.fitLink}>Cilt profili oluştur</Text>
+        </Pressable>
+      </View>
+    );
+  }
+  const list = (items: { name: string; group: string }[]) => items.map((i) => `${i.name} (${lowerTr(i.group)})`).join(", ");
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>Cildine uygunluk</Text>
+      <Text style={styles.fitBasis}>{fit.basis.join(" · ")}</Text>
+      {fit.avoid.length > 0 ? (
+        <View style={styles.reason}>
+          <Ionicons name="alert-circle-outline" size={17} color={colors.accent} />
+          <Text style={styles.reasonText}>{`Sana uygun olmayabilir: ${list(fit.avoid)}.`}</Text>
+        </View>
+      ) : (
+        <View style={styles.reason}>
+          <Ionicons name="checkmark-circle-outline" size={17} color="#3E8E5E" />
+          <Text style={styles.reasonText}>Cilt profiline göre dikkat etmen gereken bir içerik bulunmadı.</Text>
+        </View>
+      )}
+      {fit.good.length > 0 && (
+        <View style={styles.reason}>
+          <Ionicons name="leaf-outline" size={17} color="#3E8E5E" />
+          <Text style={styles.reasonText}>{`Cildine iyi gelebilir: ${list(fit.good)}.`}</Text>
+        </View>
+      )}
+      <Text style={styles.fitNote}>Genel içerik bilgisine dayanır, tıbbi bir değerlendirme değildir. Tepki verirsen kullanmayı bırak.</Text>
+    </View>
+  );
+}
+
+/** The flagged substances; each opens what it is ("Ne işe yarar?"). */
+function FlaggedList({ items }: { items: FlaggedIngredient[] }) {
+  const explanations = useExplanations();
+  return (
+    <>
+      {items.map((item, i) => {
+        const key = `${i}`;
+        const open = explanations.open === key;
+        return (
+          <View key={key} style={i > 0 && styles.divider}>
+            <FlaggedRow item={item} open={open} onExplain={() => explanations.toggle(key, item.inciName)} />
+            {open && <ExplanationText value={explanations.explanation(item.inciName)} />}
+          </View>
+        );
+      })}
+    </>
+  );
+}
+
+function FlaggedRow({ item, open, onExplain }: { item: FlaggedIngredient; open: boolean; onExplain: () => void }) {
   const { settings } = useApp();
   const avoid = isAvoid(item) || (item.restrictionType === "pregnancy_unsafe" && settings.highlightRisky);
   const tone = avoid ? colors.danger : colors.accent;
   return (
-    <View style={[styles.flagRow, divider && styles.divider]}>
+    <View style={styles.flagRow}>
       <Ionicons name="flask-outline" size={20} color={tone} />
       <View style={styles.flagBody}>
         <Text style={styles.flagName}>{item.inciName}</Text>
         <Text style={styles.flagNote}>{settings.showNotes && item.notes ? item.notes : TYPE_LABEL[item.restrictionType]}</Text>
-      </View>
-      <View style={[styles.badge, { backgroundColor: avoid ? colors.dangerLight : colors.accentLight }]}>
-        <Ionicons name={avoid ? "close-circle" : "alert-circle"} size={11} color={tone} />
-        <Text style={[styles.badgeText, { color: tone }]}>{avoid ? "Kaçın" : "Dikkat"}</Text>
+        <View style={styles.flagActions}>
+          <View style={[styles.badge, { backgroundColor: avoid ? colors.dangerLight : colors.accentLight }]}>
+            <Ionicons name={avoid ? "close-circle" : "alert-circle"} size={11} color={tone} />
+            <Text style={[styles.badgeText, { color: tone }]}>{avoid ? "Kaçın" : "Dikkat"}</Text>
+          </View>
+          <ExplainButton open={open} onPress={onExplain} />
+        </View>
       </View>
     </View>
   );
@@ -372,7 +441,11 @@ const styles = StyleSheet.create({
   bullet: { fontSize: 14, color: colors.text },
   reason: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
   reasonText: { flex: 1, fontSize: 13, color: colors.muted, lineHeight: 19 },
-  flagRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 },
+  fitBasis: { fontSize: 12.5, color: colors.primary, fontWeight: "500", marginTop: -4 },
+  fitNote: { fontSize: 11.5, color: colors.muted, lineHeight: 16 },
+  fitLink: { fontSize: 13.5, color: colors.primary, fontWeight: "600" },
+  flagRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingVertical: 6 },
+  flagActions: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 },
   flagBody: { flex: 1, gap: 2 },
   divider: { borderTopWidth: 1, borderTopColor: colors.border },
   badge: { flexDirection: "row", alignItems: "center", gap: 3, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4 },

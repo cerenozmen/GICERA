@@ -138,11 +138,20 @@ export function Chip({ label, active, onPress, check, small }: { label: string; 
   );
 }
 
-export function Tag({ label, tone = "green" }: { label: string; tone?: "green" | "orange" }) {
-  const orange = tone === "orange";
+const TAG_TONES = {
+  green: { bg: colors.primaryLight, fg: colors.primary },
+  orange: { bg: colors.accentLight, fg: colors.accent },
+  gray: { bg: "#EFEBE5", fg: colors.muted },
+  /** The primary button's own green (ingredient roles). */
+  solid: { bg: colors.primary, fg: "#FFFFFF" },
+  /** Soft terracotta for a flagged ingredient in the list. */
+  clay: { bg: "#F6E3DA", fg: "#A8614A" },
+};
+
+export function Tag({ label, tone = "green" }: { label: string; tone?: keyof typeof TAG_TONES }) {
   return (
-    <View style={[styles.tag, { backgroundColor: orange ? colors.accentLight : colors.primaryLight }]}>
-      <Text style={[styles.tagText, { color: orange ? colors.accent : colors.primary }]}>{label}</Text>
+    <View style={[styles.tag, { backgroundColor: TAG_TONES[tone].bg }]}>
+      <Text style={[styles.tagText, { color: TAG_TONES[tone].fg }]}>{label}</Text>
     </View>
   );
 }

@@ -7,16 +7,22 @@ import { Product } from "./types";
  */
 export const lowerTr = (text: string) => text.replace(/İ/g, "i").replace(/I/g, "ı").toLowerCase();
 
-/** Comma/semicolon split that ignores separators inside parentheses (mirrors the backend tokenizer). */
+/**
+ * Comma/semicolon split that ignores separators inside parentheses (mirrors the backend tokenizer), and the
+ * comma of a chemical locant ("1,2-Hexanediol": a digit, a comma, a digit).
+ */
 export function parseIngredients(text: string | null | undefined): string[] {
   if (!text) return [];
   const tokens: string[] = [];
   let current = "";
   let depth = 0;
-  for (const char of text) {
+  const chars = [...text];
+  for (let i = 0; i < chars.length; i++) {
+    const char = chars[i];
+    const locant = char === "," && /\d/.test(chars[i - 1] ?? "") && /\d/.test(chars[i + 1] ?? "");
     if (char === "(") depth++;
     else if (char === ")") depth = Math.max(0, depth - 1);
-    else if ((char === "," || char === ";") && depth === 0) {
+    else if ((char === "," || char === ";") && depth === 0 && !locant) {
       tokens.push(current.trim());
       current = "";
     } else if (depth === 0) current += char;

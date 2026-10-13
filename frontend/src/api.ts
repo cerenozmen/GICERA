@@ -153,3 +153,20 @@ async function getExplanation(name: string): Promise<IngredientExplanation> {
   if (!response.ok) throw new Error((data as { error?: string }).error ?? `Sunucu hatası (${response.status})`);
   return data as IngredientExplanation;
 }
+
+/** One row of an ingredient list as the server reads it (backend ingredientDetails.ts). */
+export interface IngredientRowDetails {
+  inciName: string | null;
+  /** What it does, as Turkish tags (CosIng functions), most telling first. */
+  functions: string[];
+  /** The product's flagged substances this row is. */
+  flagged: string[];
+}
+
+/**
+ * Each row's INCI name, function tags and flagged substances, read with the scoring's own matching, so the
+ * list marks every substance the product screen flags. `unplaced`: flagged substances no row holds.
+ */
+export async function getIngredientDetails(ingredients: string[], flagged: string[]): Promise<{ rows: IngredientRowDetails[]; unplaced: string[] }> {
+  return postJson("/ingredients/details", { ingredients, flagged });
+}
