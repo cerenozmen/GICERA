@@ -1,7 +1,8 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import type { IconName } from "../components/icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Switch, View } from "react-native";
+import { Text } from "../components/Text";
 import { useApp } from "../AppContext";
 import { ScreenHeader } from "../components/common";
 import { RootStackParamList } from "../navigation/types";
@@ -40,7 +41,7 @@ export function PregnancyModeScreen({ navigation }: NativeStackScreenProps<RootS
               <Switch
                 value={settings[o.key]}
                 onValueChange={(value) => updateSettings({ [o.key]: value })}
-                trackColor={{ true: colors.primary, false: "#DDD" }}
+                trackColor={{ true: colors.primary, false: colors.line }}
                 thumbColor="#fff"
               />
             </View>

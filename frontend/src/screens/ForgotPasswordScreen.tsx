@@ -1,6 +1,7 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
+import { Text } from "../components/Text";
 import { authApi } from "../authApi";
 import { PrimaryButton } from "../components/common";
 import { Field, FormMessage, FormPage } from "../components/Field";

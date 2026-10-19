@@ -1,10 +1,11 @@
 import { createNavigationContainerRef, DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { useEffect, useRef } from "react";
-import { Alert, Linking, StatusBar, View } from "react-native";
+import { Alert, Linking, StatusBar, StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppProvider, useApp } from "./src/AppContext";
 import { AuthProvider, useAuth } from "./src/AuthContext";
 import { RootStackParamList } from "./src/navigation/types";
+import { MAX_CONTENT_WIDTH } from "./src/responsive";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { parseRecoveryLink, RecoveryLink } from "./src/recoveryLink";
 import { SkinProfileSync } from "./src/SkinProfileSync";
@@ -65,13 +66,23 @@ function Root() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AppProvider>
-        <AuthProvider>
-          <Root />
-          <SkinProfileSync />
-          <StatusBar barStyle="dark-content" />
-        </AuthProvider>
-      </AppProvider>
+      {/* On tablets and in landscape the app stays one centered column instead of stretching edge to edge. */}
+      <View style={styles.backdrop}>
+        <View style={styles.column}>
+          <AppProvider>
+            <AuthProvider>
+              <Root />
+              <SkinProfileSync />
+              <StatusBar barStyle="dark-content" />
+            </AuthProvider>
+          </AppProvider>
+        </View>
+      </View>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: colors.surface },
+  column: { flex: 1, width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center", backgroundColor: colors.bg, overflow: "hidden" },
+});

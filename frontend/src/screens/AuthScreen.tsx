@@ -1,6 +1,7 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { Alert, Image, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "../components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuthApiError } from "../authApi";
 import { useAuth } from "../AuthContext";
@@ -8,8 +9,9 @@ import { PrimaryButton } from "../components/common";
 import { Field, FormMessage } from "../components/Field";
 import { GoogleLogo } from "../components/GoogleLogo";
 import { googleConfigured } from "../google";
-import { isEmail, PASSWORD_RULE, passwordProblem } from "../formRules";
+import { isEmail, nameProblem, PASSWORD_RULE, passwordProblem } from "../formRules";
 import { RootStackParamList } from "../navigation/types";
+import { useLayout } from "../responsive";
 import { colors, LOGO_BG, serif } from "../theme";
 import { useSubmit } from "../useSubmit";
 
@@ -23,8 +25,11 @@ type Mode = "login" | "signup";
  */
 export function AuthScreen({ navigation }: NativeStackScreenProps<RootStackParamList, "Auth">) {
   const insets = useSafeAreaInsets();
+  const layout = useLayout();
   const { signIn, signUp, resendConfirmation, signInWithGoogle } = useAuth();
   const [mode, setMode] = useState<Mode>("login");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
@@ -50,9 +55,11 @@ export function AuthScreen({ navigation }: NativeStackScreenProps<RootStackParam
     form.run(async () => {
       if (!isEmail(email)) throw new Error("Geçerli bir e-posta adresi gir.");
       if (mode === "signup") {
+        const nameError = nameProblem(firstName, "Ad") ?? nameProblem(lastName, "Soyad");
+        if (nameError) throw new Error(nameError);
         const problem = passwordProblem(password);
         if (problem) throw new Error(problem);
-        const { needsConfirmation } = await signUp(email.trim(), password);
+        const { needsConfirmation } = await signUp(email.trim(), password, firstName.trim(), lastName.trim());
         if (!needsConfirmation) return finish();
         awaitLink(email.trim(), "Hesabın oluşturuldu.");
         return;
@@ -113,7 +120,7 @@ export function AuthScreen({ navigation }: NativeStackScreenProps<RootStackParam
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.brandBlock}>
-          <Image source={LOGO} style={styles.logo} resizeMode="contain" />
+          <Image source={LOGO} style={[styles.logo, layout.isShort && { width: 110, height: 110 * (775 / 820) }]} resizeMode="contain" />
           <Text style={styles.brand}>Gicera</Text>
           <Text style={styles.motto}>İÇERİĞİNİ BİL, KENDİNE İYİ BAK.</Text>
         </View>
@@ -145,6 +152,12 @@ export function AuthScreen({ navigation }: NativeStackScreenProps<RootStackParam
             </View>
 
             <View style={styles.form}>
+              {mode === "signup" && (
+                <>
+                  <Field label="Ad" value={firstName} onChangeText={setFirstName} autoCapitalize="words" autoComplete="given-name" textContentType="givenName" maxLength={40} returnKeyType="next" />
+                  <Field label="Soyad" value={lastName} onChangeText={setLastName} autoCapitalize="words" autoComplete="family-name" textContentType="familyName" maxLength={40} returnKeyType="next" />
+                </>
+              )}
               <Field
                 label="E-posta"
                 value={email}
@@ -211,7 +224,7 @@ const styles = StyleSheet.create({
   logo: { width: 150, height: 150 * (775 / 820) },
   brand: { fontFamily: serif, fontSize: 44, color: colors.primary, marginTop: -4 },
   motto: { fontSize: 11, letterSpacing: 3.5, color: colors.text, textAlign: "center", marginTop: 6 },
-  title: { fontSize: 10, fontWeight: "800", letterSpacing: 2, color: "#111A15", textAlign: "center" },
+  title: { fontSize: 10, fontWeight: "800", letterSpacing: 2, color: colors.text, textAlign: "center" },
   tabs: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: colors.border },
   tab: { flex: 1, alignItems: "center", paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: "transparent", marginBottom: -1 },
   tabOn: { borderBottomColor: colors.primary },
@@ -232,7 +245,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     borderWidth: 1,
-    borderColor: "#CFC8BD",
+    borderColor: colors.line,
     backgroundColor: colors.card,
     borderRadius: 999,
     paddingVertical: 15,

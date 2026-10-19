@@ -1,6 +1,7 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ReactNode, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Text } from "../components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../AppContext";
 import { useAuth } from "../AuthContext";
@@ -19,7 +20,7 @@ const PAGES = [
 ];
 const FADE = require("../../assets/welcome-fade.png");
 
-const INK = "#10241E";
+const INK = colors.primaryDark;
 const CREAM = "#F6EDE4";
 
 /** The intro's dots also count the quiz that follows. */
@@ -164,14 +165,14 @@ const styles = StyleSheet.create({
   abs: { position: "absolute" },
   words: { position: "absolute", justifyContent: "center" },
   brandName: { fontFamily: display, color: INK, textAlign: "center" },
-  motto: { color: "#2F4640", textAlign: "center", fontWeight: "500" },
+  motto: { color: colors.text, textAlign: "center", fontWeight: "500" },
   promiseCopy: { position: "absolute", left: 28, right: 28, alignItems: "center", gap: 14 },
   headline: { fontFamily: display, color: INK, textAlign: "center" },
-  body: { color: "#55605E", textAlign: "center", fontSize: 15.5, lineHeight: 23, maxWidth: 330 },
+  body: { color: colors.muted, textAlign: "center", fontSize: 15.5, lineHeight: 23, maxWidth: 330 },
   fade: { position: "absolute", left: 0, right: 0, bottom: 0, width: "100%" },
   actions: { position: "absolute", left: 0, right: 0, bottom: 0, gap: 14, paddingHorizontal: 24 },
   dots: { flexDirection: "row", justifyContent: "center", gap: 7 },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#D8D2C8" },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.line },
   dotOn: { backgroundColor: colors.primary },
   skip: { color: colors.muted, textAlign: "center", fontSize: 14 },
 });

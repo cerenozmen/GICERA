@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { z } from "zod";
 import { DISPOSABLE_MESSAGE, isDisposableEmail } from "../data/disposableDomains";
-import { AuthFailure, bearerToken, PASSWORD_MAX, passwordProblem } from "../services/authRules";
+import { AuthFailure, bearerToken, nameProblem, PASSWORD_MAX, passwordProblem } from "../services/authRules";
 import * as auth from "../services/authService";
 import { createRateLimiter } from "../services/forumRules";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -22,19 +22,27 @@ const password = z
     if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem });
   });
 const currentPassword = z.string().min(1, "Mevcut parolanı gir.").max(PASSWORD_MAX);
-const name = z.string().trim().max(40, "En fazla 40 karakter olabilir.");
+const personName = (label: string) =>
+  z
+    .string()
+    .trim()
+    .superRefine((value, ctx) => {
+      const problem = nameProblem(value, label);
+      if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem });
+    });
 
 // A new account's (or a changed) address must not be a throwaway mailbox; signing in or resetting stays open to any.
 const permanentEmail = email.refine((value) => !isDisposableEmail(value), { message: DISPOSABLE_MESSAGE });
 
 const credentialsBody = z.object({ email: permanentEmail, password });
+const signupBody = z.object({ email: permanentEmail, password, firstName: personName("Ad"), lastName: personName("Soyad") });
 const loginBody = z.object({ email, password: z.string().min(1, "Şifreni gir.").max(PASSWORD_MAX) });
 const resendBody = z.object({ email });
 const googleBody = z.object({ idToken: z.string().min(20).max(4096) });
 const refreshBody = z.object({ refreshToken: z.string().min(5).max(512) });
 const forgotBody = z.object({ email });
 const recoveryBody = z.object({ accessToken: z.string().min(20).max(4096), refreshToken: z.string().min(5).max(512), password });
-const profileBody = z.object({ firstName: name, lastName: name });
+const profileBody = z.object({ firstName: personName("Ad"), lastName: personName("Soyad") });
 const answer = z.string().trim().max(60).nullable();
 const skinProfileBody = z.object({
   skinType: answer,
@@ -72,9 +80,9 @@ function tooMany(res: Response, allowed: boolean): boolean {
 authRouter.post(
   "/signup",
   asyncHandler(async (req, res) => {
-    const body = parse(credentialsBody, req, res);
+    const body = parse(signupBody, req, res);
     if (!body || tooMany(res, allowAttempt(`signup:${req.ip}`))) return;
-    const result = await auth.signUp(body.email, body.password);
+    const result = await auth.signUp(body.email, body.password, body.firstName, body.lastName);
     res.status(201).json({ ...result, needsConfirmation: result.session === null });
   })
 );

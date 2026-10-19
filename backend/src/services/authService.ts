@@ -73,8 +73,9 @@ function unwrap<T extends { error: { code?: string; status?: number; message?: s
   return result;
 }
 
-export async function signUp(email: string, password: string): Promise<AuthResult> {
-  const { data } = unwrap(await client().auth.signUp({ email, password, options: { emailRedirectTo: RECOVERY_REDIRECT } }));
+export async function signUp(email: string, password: string, firstName = "", lastName = ""): Promise<AuthResult> {
+  const data_ = { first_name: cleanName(firstName), last_name: cleanName(lastName) };
+  const { data } = unwrap(await client().auth.signUp({ email, password, options: { emailRedirectTo: RECOVERY_REDIRECT, data: data_ } }));
   if (!data.user) throw new AuthFailure(502, "Hesap oluşturulamadı. Tekrar dene.");
   return { user: toUser(data.user), session: toSession(data.session) };
 }

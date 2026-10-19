@@ -1,7 +1,8 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import type { IconName } from "./icons";
 import { ReactNode } from "react";
-import { Image, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { Image, Pressable, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
+import { Text } from "./Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProductSnapshot } from "../storage";
 import { colors, ratingStyle, serif, shadow } from "../theme";
@@ -24,14 +25,14 @@ export function Thumb({ uri, size = 56 }: { uri: string | null; size?: number })
 export function ScoreChip({ rating, score, listRead }: { rating: CleanRating | null; score: number | null; listRead?: boolean }) {
   if ((!rating || score === null) && listRead) {
     return (
-      <View style={[styles.chip, { backgroundColor: "#E3F2E7" }]}>
+      <View style={[styles.chip, { backgroundColor: colors.primaryLight }]}>
         <Text style={[styles.chipText, { color: colors.primary }]}>Liste okundu · skor yok</Text>
       </View>
     );
   }
   if (!rating || score === null) {
     return (
-      <View style={[styles.chip, { backgroundColor: "#EEE" }]}>
+      <View style={[styles.chip, { backgroundColor: colors.surface }]}>
         <Text style={[styles.chipText, { color: colors.muted }]}>Analiz yok</Text>
       </View>
     );
@@ -141,11 +142,11 @@ export function Chip({ label, active, onPress, check, small }: { label: string; 
 const TAG_TONES = {
   green: { bg: colors.primaryLight, fg: colors.primary },
   orange: { bg: colors.accentLight, fg: colors.accent },
-  gray: { bg: "#EFEBE5", fg: colors.muted },
+  gray: { bg: colors.surface, fg: colors.muted },
   /** The primary button's own green (ingredient roles). */
   solid: { bg: colors.primary, fg: "#FFFFFF" },
   /** Soft terracotta for a flagged ingredient in the list. */
-  clay: { bg: "#F6E3DA", fg: "#A8614A" },
+  clay: { bg: colors.accentLight, fg: colors.accentDark },
 };
 
 export function Tag({ label, tone = "green" }: { label: string; tone?: keyof typeof TAG_TONES }) {
@@ -166,7 +167,7 @@ export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
 }
 
 const styles = StyleSheet.create({
-  back: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#EFEAE3", alignItems: "center", justifyContent: "center" },
+  back: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
   backDark: { backgroundColor: "rgba(255,255,255,0.12)" },
   primary: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 16, paddingHorizontal: 24 },
   primaryText: { color: "#fff", fontSize: 16, fontWeight: "600" },

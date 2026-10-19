@@ -1,3 +1,5 @@
+import { colors } from "./theme";
+
 export const CATEGORIES = ["Cilt bakımı", "İçerikler", "Rutin", "Ürün önerisi"] as const;
 
 export function timeAgo(time: string, now = Date.now()): string {
@@ -11,10 +13,10 @@ export function timeAgo(time: string, now = Date.now()): string {
 }
 
 const AVATAR_TONES = [
-  { bg: "#E6EEE7", fg: "#1F4D3A" },
-  { bg: "#FCE9DF", fg: "#C2551F" },
-  { bg: "#EDE7F3", fg: "#5B4A7A" },
-  { bg: "#E4EEF3", fg: "#2F5A6E" },
+  { bg: colors.primaryLight, fg: colors.primary },
+  { bg: colors.accentLight, fg: colors.accentDark },
+  { bg: colors.primary, fg: "#FFFFFF" },
+  { bg: colors.accent, fg: "#FFFFFF" },
 ];
 
 export function avatarTone(name: string) {

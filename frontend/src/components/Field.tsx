@@ -1,6 +1,7 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { ReactNode, useState } from "react";
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, TextInputProps, View } from "react-native";
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInputProps, View } from "react-native";
+import { Text, TextInput } from "./Text";
 import { colors } from "../theme";
 import { ScreenHeader } from "./common";
 import type { IconName } from "./icons";
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40, gap: 22 },
   field: { gap: 6 },
   label: { fontSize: 11, letterSpacing: 1.4, color: colors.muted, textTransform: "uppercase" },
-  inputRow: { flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: "#CFC8BD" },
+  inputRow: { flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: colors.line },
   inputFocused: { borderBottomColor: colors.primary },
   inputError: { borderBottomColor: colors.danger },
   error: { fontSize: 12.5, color: colors.danger, marginTop: 2 },

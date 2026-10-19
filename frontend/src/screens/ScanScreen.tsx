@@ -1,7 +1,8 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Pressable, StyleSheet, View } from "react-native";
+import { Text, TextInput } from "../components/Text";
 import { Camera } from "react-native-camera-kit";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCameraPermission } from "react-native-vision-camera";
@@ -115,7 +116,7 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
             <TextInput
               style={styles.input}
               placeholder="Barkod numarası"
-              placeholderTextColor="#aaa"
+              placeholderTextColor={colors.muted}
               keyboardType="number-pad"
               autoFocus
               value={manualCode}
@@ -157,7 +158,7 @@ const styles = StyleSheet.create({
   segmentOn: { backgroundColor: "#fff" },
   segmentText: { color: "#fff", fontSize: 14 },
   segmentTextOn: { color: colors.text, fontWeight: "600" },
-  viewer: { flex: 1, marginHorizontal: 16, borderRadius: 24, overflow: "hidden", backgroundColor: "#26332C" },
+  viewer: { flex: 1, marginHorizontal: 16, borderRadius: 24, overflow: "hidden", backgroundColor: colors.scanBg },
   frameWrap: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", paddingBottom: 90 },
   frame: { width: "80%", height: 180, justifyContent: "center" },
   corner: { position: "absolute", width: CORNER, height: CORNER, borderColor: colors.accent },

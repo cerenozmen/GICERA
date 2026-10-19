@@ -47,7 +47,8 @@ async function request<T>(method: string, path: string, body?: unknown, token?: 
 }
 
 export const authApi = {
-  signUp: (email: string, password: string) => request<AuthResult>("POST", "/signup", { email, password }),
+  signUp: (email: string, password: string, firstName: string, lastName: string) =>
+    request<AuthResult>("POST", "/signup", { email, password, firstName, lastName }),
   resend: (email: string) => request<{ ok: true }>("POST", "/resend", { email }),
   signIn: (email: string, password: string) => request<AuthResult>("POST", "/login", { email, password }),
   google: (idToken: string) => request<AuthResult>("POST", "/google", { idToken }),

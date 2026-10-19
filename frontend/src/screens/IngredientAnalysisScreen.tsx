@@ -1,7 +1,8 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "../components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getIngredientDetails, IngredientRowDetails } from "../api";
 import { useApp } from "../AppContext";
@@ -79,8 +80,8 @@ export function IngredientAnalysisScreen({ navigation, route }: NativeStackScree
       <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
         <BackButton onPress={() => navigation.goBack()} />
         <View style={styles.basket}>
-          <Ionicons name="basket-outline" size={34} color="#C9C2B8" />
-          <Ionicons name="leaf" size={14} color="#8FB59A" style={styles.basketLeaf} />
+          <Ionicons name="basket-outline" size={34} color={colors.line} />
+          <Ionicons name="leaf" size={14} color={colors.primaryMint} style={styles.basketLeaf} />
         </View>
       </View>
 

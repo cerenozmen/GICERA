@@ -3,7 +3,8 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useRef, useState } from "react";
 import TextRecognition, { TextRecognitionResult } from "@react-native-ml-kit/text-recognition";
 import { orientedSize, toScanFrame } from "../guidedScan";
-import { ActivityIndicator, Linking, NativeModules, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, NativeModules, Pressable, StyleSheet, View } from "react-native";
+import { Text } from "../components/Text";
 import RNFS from "react-native-fs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera, useCameraDevice, useCameraPermission } from "react-native-vision-camera";
@@ -707,7 +708,7 @@ const styles = StyleSheet.create({
   frameWrap: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", paddingBottom: 90 },
   frame: { width: "88%", height: "45%" },
   corner: { position: "absolute", width: CORNER, height: CORNER, borderColor: colors.accent },
-  cornerDone: { borderColor: "#3DDC84" },
+  cornerDone: { borderColor: colors.primaryMint },
   tl: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 14 },
   tr: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 14 },
   bl: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 14 },

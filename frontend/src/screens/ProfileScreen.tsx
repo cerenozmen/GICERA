@@ -3,7 +3,8 @@ import type { IconName } from "../components/icons";
 import { CompositeScreenProps } from "@react-navigation/native";
 import { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "../components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../AppContext";
 import { useAuth } from "../AuthContext";
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
   guest: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 22, padding: 18, gap: 10 },
   profile: { backgroundColor: colors.primary, borderRadius: 22, padding: 18, gap: 14 },
   profileHead: { flexDirection: "row", alignItems: "center", gap: 12 },
-  drop: { width: 46, height: 46, borderRadius: 23, borderWidth: 3, borderColor: "#7FB08F", alignItems: "center", justifyContent: "center" },
+  drop: { width: 46, height: 46, borderRadius: 23, borderWidth: 3, borderColor: colors.primaryMid, alignItems: "center", justifyContent: "center" },
   profileLabel: { color: "rgba(255,255,255,0.75)", fontSize: 12 },
   profileType: { color: "#fff", fontSize: 22, fontWeight: "600" },
   edit: { color: "#fff", fontSize: 14, textDecorationLine: "underline" },

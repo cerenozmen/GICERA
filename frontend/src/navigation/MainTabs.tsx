@@ -1,8 +1,10 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import type { IconName } from "../components/icons";
 import { BottomTabBarProps, createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Text } from "../components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLayout } from "../responsive";
 import { colors } from "../theme";
 import { DiscussionScreen } from "../screens/DiscussionScreen";
 import { HistoryScreen } from "../screens/HistoryScreen";
@@ -23,6 +25,7 @@ const TABS: Record<keyof MainTabParamList, { label: string; on: IconName; off: I
 /** The design's bar: the active tab sits on a soft green tile; the scan button is a raised orange square. */
 function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { isSmall } = useLayout();
   return (
     <View style={[styles.bar, { paddingBottom: insets.bottom + 8 }]}>
       {state.routes.map((route, index) => {
@@ -35,7 +38,7 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
               <View style={styles.scan}>
                 <Ionicons name="scan-outline" size={26} color="#fff" />
               </View>
-              <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit>
+              <Text style={[styles.label, isSmall && styles.labelSmall]} numberOfLines={1} adjustsFontSizeToFit>
                 {tab.label}
               </Text>
             </Pressable>
@@ -53,7 +56,7 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
             accessibilityLabel={tab.label}
           >
             <Ionicons name={focused ? tab.on : tab.off} size={25} color={focused ? colors.primary : colors.text} />
-            <Text style={[styles.label, focused && styles.labelOn]} numberOfLines={1} adjustsFontSizeToFit>
+            <Text style={[styles.label, isSmall && styles.labelSmall, focused && styles.labelOn]} numberOfLines={1} adjustsFontSizeToFit>
               {tab.label}
             </Text>
           </Pressable>
@@ -82,6 +85,7 @@ const styles = StyleSheet.create({
   item: { flex: 1, alignItems: "center", justifyContent: "flex-end", gap: 4, paddingVertical: 8, borderRadius: 14 },
   itemOn: { backgroundColor: colors.primaryLight },
   label: { fontSize: 11.5, color: colors.text },
+  labelSmall: { fontSize: 10 },
   labelOn: { color: colors.primary, fontWeight: "500" },
   scan: {
     marginTop: -26,

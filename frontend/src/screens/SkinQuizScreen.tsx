@@ -1,7 +1,8 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ReactNode, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "../components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../AppContext";
 import { useAuth } from "../AuthContext";
@@ -233,13 +234,13 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   top: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingBottom: 8 },
   counter: { fontSize: 12, color: colors.muted },
-  track: { height: 4, borderRadius: 2, backgroundColor: "#E7E1D8" },
+  track: { height: 4, borderRadius: 2, backgroundColor: colors.line },
   fill: { height: 4, borderRadius: 2, backgroundColor: colors.primary },
   content: { padding: 20, paddingTop: 16 },
   title: { fontFamily: serif, fontSize: 28, color: colors.text },
   sub: { fontSize: 14, color: colors.muted, lineHeight: 20, marginTop: 8, marginBottom: 22 },
   option: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 14 },
-  optionOn: { borderColor: colors.primary, borderWidth: 1.5, backgroundColor: "#F3F6F1" },
+  optionOn: { borderColor: colors.primary, borderWidth: 1.5, backgroundColor: colors.primaryLight },
   drop: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.accentLight, alignItems: "center", justifyContent: "center" },
   optionTitle: { fontSize: 15, fontWeight: "600", color: colors.text },
   optionText: { fontSize: 12, color: colors.muted, marginTop: 2 },
@@ -248,11 +249,11 @@ const styles = StyleSheet.create({
   sep: { height: 1, backgroundColor: colors.border, marginVertical: 22 },
   question: { fontSize: 15, color: colors.text, marginBottom: 12, lineHeight: 21 },
   outline: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 11 },
-  outlineOn: { borderColor: colors.primary, borderWidth: 1.5, backgroundColor: "#F3F6F1" },
+  outlineOn: { borderColor: colors.primary, borderWidth: 1.5, backgroundColor: colors.primaryLight },
   outlineText: { fontSize: 14, color: colors.text },
   info: { flexDirection: "row", gap: 10, backgroundColor: colors.accentLight, borderRadius: 16, padding: 14, marginTop: 24, alignItems: "flex-start" },
   infoText: { flex: 1, fontSize: 13, lineHeight: 19, color: colors.text },
-  why: { backgroundColor: "#F1ECE5", borderRadius: 16, padding: 14, marginTop: 24, gap: 10 },
+  why: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, marginTop: 24, gap: 10 },
   whyRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   whyTitle: { flex: 1, fontSize: 14, color: colors.text },
   whyText: { fontSize: 13, lineHeight: 19, color: colors.muted },
