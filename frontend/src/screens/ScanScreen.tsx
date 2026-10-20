@@ -14,7 +14,7 @@ import { colors } from "../theme";
 
 export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParamList, "Scan">) {
   const insets = useSafeAreaInsets();
-  const { recordScan } = useApp();
+  const { recordScan, canScan, consumeFreeScan, freeScansLeft, premium } = useApp();
   const { hasPermission, requestPermission } = useCameraPermission();
   const [torch, setTorch] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -25,12 +25,18 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
 
   async function handleCode(code: string) {
     if (busy || code === lastCode.current) return;
+    // Free reads used up: the paywall takes over the whole screen instead of looking the code up.
+    if (!canScan) {
+      navigation.replace("Paywall");
+      return;
+    }
     lastCode.current = code;
     setBusy(true);
     setMessage(null);
     try {
       const result = await lookupBarcode(code);
       if (result.found) {
+        consumeFreeScan();
         recordScan(result.product);
         navigation.replace("ProductDetail", { barcode: code, product: result.product });
         return;
@@ -102,7 +108,7 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
           </View>
         </View>
         <View style={styles.viewerBottom}>
-          {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.hint}>{message ?? "Barkodu çerçeveye hizala, otomatik taranacaktır."}</Text>}
+          {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.hint}>{message ?? (premium ? "Barkodu çerçeveye hizala, otomatik taranacaktır." : `Barkodu çerçeveye hizala. Ücretsiz hakkın: ${freeScansLeft}`)}</Text>}
           <Pressable style={styles.torchPill} onPress={() => setTorch((t) => !t)}>
             <Ionicons name={torch ? "flash" : "flash-outline"} size={14} color={colors.accent} />
             <Text style={styles.torchText}>{torch ? "Işığı kapat" : "Işığı aç"}</Text>

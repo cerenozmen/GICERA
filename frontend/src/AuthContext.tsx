@@ -26,6 +26,8 @@ interface AuthState {
   updateName: (firstName: string, lastName: string) => Promise<void>;
   /** Keeps the skin quiz's answers with the account. */
   saveSkinProfile: (profile: SkinProfile) => Promise<void>;
+  /** Raises the account's used free-read count (the server never lowers it). */
+  saveScansUsed: (used: number) => Promise<void>;
   changeEmail: (currentPassword: string, newEmail: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
@@ -162,6 +164,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [authed, setUser]
   );
 
+  const saveScansUsed = useCallback<AuthState["saveScansUsed"]>(
+    async (used) => setUser((await authed((token) => authApi.saveScansUsed(token, used))).user),
+    [authed, setUser]
+  );
+
   const changeEmail = useCallback<AuthState["changeEmail"]>(
     async (currentPassword, newEmail) => {
       await authed((token) => authApi.changeEmail(token, currentPassword, newEmail));
@@ -190,10 +197,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshUser,
       updateName,
       saveSkinProfile,
+      saveScansUsed,
       changeEmail,
       changePassword,
     }),
-    [ready, stored, signUp, signInWithLink, resendConfirmation, signIn, signInWithGoogle, resetPassword, signOut, refreshUser, updateName, saveSkinProfile, changeEmail, changePassword]
+    [ready, stored, signUp, signInWithLink, resendConfirmation, signIn, signInWithGoogle, resetPassword, signOut, refreshUser, updateName, saveSkinProfile, saveScansUsed, changeEmail, changePassword]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

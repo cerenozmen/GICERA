@@ -8,6 +8,8 @@ export interface AuthUser {
   lastName: string;
   /** The skin quiz's answers kept with the account; null until it was taken (older saved sign-ins: missing). */
   skinProfile?: SkinProfile | null;
+  /** Free barcode reads the account has used (older saved sign-ins: missing). */
+  scansUsed?: number;
 }
 
 export interface AuthSession {
@@ -59,6 +61,7 @@ export const authApi = {
   me: (token: string) => request<{ user: AuthUser }>("GET", "/me", undefined, token),
   updateName: (token: string, firstName: string, lastName: string) =>
     request<{ user: AuthUser }>("PATCH", "/profile", { firstName, lastName }, token),
+  saveScansUsed: (token: string, used: number) => request<{ user: AuthUser }>("PUT", "/scans", { used }, token),
   updateSkinProfile: (token: string, profile: SkinProfile) => request<{ user: AuthUser }>("PUT", "/skin-profile", profile, token),
   changeEmail: (token: string, currentPassword: string, newEmail: string) =>
     request<{ ok: true }>("POST", "/email", { currentPassword, newEmail }, token),

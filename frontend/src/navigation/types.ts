@@ -17,6 +17,8 @@ export type RootStackParamList = {
   ChangePassword: undefined;
   Main: undefined;
   Scan: undefined;
+  /** Full-screen plans, opened when the free barcode reads run out. */
+  Paywall: undefined;
   /** A barcode the database doesn't know: ways to go on (scan the list instead). */
   ProductNotFound: { barcode: string };
   Favorites: undefined;

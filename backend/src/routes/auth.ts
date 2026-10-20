@@ -54,6 +54,7 @@ const skinProfileBody = z.object({
   pregnant: answer,
   skinCondition: answer,
 });
+const scansBody = z.object({ used: z.number().int().min(0).max(1000) });
 const emailBody = z.object({ currentPassword, newEmail: permanentEmail });
 const passwordBody = z.object({ currentPassword, newPassword: password });
 
@@ -170,6 +171,16 @@ authRouter.put(
     const body = accessToken ? parse(skinProfileBody, req, res) : null;
     if (!accessToken || !body) return;
     res.json({ user: await auth.updateSkinProfile(accessToken, body) });
+  })
+);
+
+authRouter.put(
+  "/scans",
+  asyncHandler(async (req, res) => {
+    const accessToken = token(req, res);
+    const body = accessToken ? parse(scansBody, req, res) : null;
+    if (!accessToken || !body) return;
+    res.json({ user: await auth.recordScansUsed(accessToken, body.used) });
   })
 );
 
