@@ -8,6 +8,8 @@ export interface AuthUser {
   lastName: string;
   /** The skin quiz's answers kept with the account; null until it was taken (older saved sign-ins: missing). */
   skinProfile?: SkinProfile | null;
+  /** Free barcode reads the account has used (older saved sign-ins: missing). */
+  scansUsed?: number;
 }
 
 export interface AuthSession {
@@ -47,7 +49,8 @@ async function request<T>(method: string, path: string, body?: unknown, token?: 
 }
 
 export const authApi = {
-  signUp: (email: string, password: string) => request<AuthResult>("POST", "/signup", { email, password }),
+  signUp: (email: string, password: string, firstName: string, lastName: string) =>
+    request<AuthResult>("POST", "/signup", { email, password, firstName, lastName }),
   resend: (email: string) => request<{ ok: true }>("POST", "/resend", { email }),
   signIn: (email: string, password: string) => request<AuthResult>("POST", "/login", { email, password }),
   google: (idToken: string) => request<AuthResult>("POST", "/google", { idToken }),
@@ -58,6 +61,7 @@ export const authApi = {
   me: (token: string) => request<{ user: AuthUser }>("GET", "/me", undefined, token),
   updateName: (token: string, firstName: string, lastName: string) =>
     request<{ user: AuthUser }>("PATCH", "/profile", { firstName, lastName }, token),
+  saveScansUsed: (token: string, used: number) => request<{ user: AuthUser }>("PUT", "/scans", { used }, token),
   updateSkinProfile: (token: string, profile: SkinProfile) => request<{ user: AuthUser }>("PUT", "/skin-profile", profile, token),
   changeEmail: (token: string, currentPassword: string, newEmail: string) =>
     request<{ ok: true }>("POST", "/email", { currentPassword, newEmail }, token),

@@ -83,3 +83,16 @@ export function bearerToken(header: string | undefined): string | null {
 export function cleanName(value: string): string {
   return value.trim().replace(/\s+/g, " ").slice(0, 40);
 }
+
+/** What's wrong with a first/last name (letters only, no digits or gibberish), or null when it's fine. `label` is "Ad" or "Soyad". */
+export function nameProblem(value: string, label: string): string | null {
+  const name = value.trim().replace(/\s+/g, " ");
+  if (!name) return `${label} alanı zorunludur.`;
+  if (name.length < 2) return `${label} en az 2 harf olmalı.`;
+  if (name.length > 40) return `${label} en fazla 40 karakter olabilir.`;
+  if (/\d/.test(name)) return `${label} rakam içeremez.`;
+  if (!/^\p{L}+(?:[ '’-]\p{L}+)*$/u.test(name)) return `${label} yalnızca harflerden oluşmalı (boşluk, ' ve - kullanılabilir).`;
+  if (/(.)\1{2,}/iu.test(name)) return `${label} geçerli görünmüyor.`;
+  if (!/[aeıioöuüâîûéè]/i.test(name)) return `${label} geçerli görünmüyor.`;
+  return null;
+}

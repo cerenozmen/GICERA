@@ -12,7 +12,7 @@ interface AuthState {
   ready: boolean;
   user: AuthUser | null;
   /** `needsConfirmation`: the account exists but must confirm its e-mail before signing in. */
-  signUp: (email: string, password: string) => Promise<{ needsConfirmation: boolean }>;
+  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ needsConfirmation: boolean }>;
   /** Signs in with the session the sign-up confirmation link opened the app with. */
   signInWithLink: (refreshToken: string) => Promise<void>;
   resendConfirmation: (email: string) => Promise<void>;
@@ -26,6 +26,8 @@ interface AuthState {
   updateName: (firstName: string, lastName: string) => Promise<void>;
   /** Keeps the skin quiz's answers with the account. */
   saveSkinProfile: (profile: SkinProfile) => Promise<void>;
+  /** Raises the account's used free-read count (the server never lowers it). */
+  saveScansUsed: (used: number) => Promise<void>;
   changeEmail: (currentPassword: string, newEmail: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
@@ -101,8 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signUp = useCallback<AuthState["signUp"]>(
-    async (email, password) => {
-      const result = await authApi.signUp(email, password);
+    async (email, password, firstName, lastName) => {
+      const result = await authApi.signUp(email, password, firstName, lastName);
       if (result.session) {
         accept(result);
         return { needsConfirmation: false };
@@ -162,6 +164,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [authed, setUser]
   );
 
+  const saveScansUsed = useCallback<AuthState["saveScansUsed"]>(
+    async (used) => setUser((await authed((token) => authApi.saveScansUsed(token, used))).user),
+    [authed, setUser]
+  );
+
   const changeEmail = useCallback<AuthState["changeEmail"]>(
     async (currentPassword, newEmail) => {
       await authed((token) => authApi.changeEmail(token, currentPassword, newEmail));
@@ -190,10 +197,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshUser,
       updateName,
       saveSkinProfile,
+      saveScansUsed,
       changeEmail,
       changePassword,
     }),
-    [ready, stored, signUp, signInWithLink, resendConfirmation, signIn, signInWithGoogle, resetPassword, signOut, refreshUser, updateName, saveSkinProfile, changeEmail, changePassword]
+    [ready, stored, signUp, signInWithLink, resendConfirmation, signIn, signInWithGoogle, resetPassword, signOut, refreshUser, updateName, saveSkinProfile, saveScansUsed, changeEmail, changePassword]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

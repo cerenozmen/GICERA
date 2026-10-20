@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { DEFAULT_SETTINGS, ProductSnapshot, Settings, SkinProfile, storage, toSnapshot } from "./storage";
 import { RoutineProduct } from "./routine";
+import { canScan as canScanWith, freeScansLeft as freeScansLeftOf, PlanId } from "./subscription";
 import { Product } from "./types";
 
 const HISTORY_LIMIT = 20;
@@ -19,6 +20,18 @@ interface AppState {
   routineProducts: Record<string, RoutineProduct>;
   /** The name shown on forum posts and replies (null until the user picks one). */
   nickname: string | null;
+  /** Free barcode reads used so far on this phone. */
+  scansUsed: number;
+  /** Free barcode reads left (3 for a new install); the paywall opens at 0. */
+  freeScansLeft: number;
+  /** The active plan, or null while on the free reads. */
+  premium: PlanId | null;
+  /** True while a barcode read is allowed: free reads remain or a plan is active. */
+  canScan: boolean;
+  /** Counts one successful barcode read against the free ones. */
+  consumeFreeScan: () => void;
+  /** Raises the used count to the account's (never lowers it). */
+  syncScansUsed: (used: number) => void;
   isFavorite: (barcode: string) => boolean;
   toggleFavorite: (product: Product) => void;
   recordScan: (product: Product) => void;
@@ -44,6 +57,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [routineDone, setRoutineDone] = useState<string[]>([]);
   const [routineProducts, setRoutineProducts] = useState<Record<string, RoutineProduct>>({});
   const [nickname, setNickname] = useState<string | null>(null);
+  const [scansUsed, setScansUsed] = useState(0);
+  const [premium, setPremium] = useState<PlanId | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -55,7 +70,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       storage.loadRoutine(),
       storage.loadNickname(),
       storage.loadRoutineProducts(),
-    ]).then(([fav, hist, sett, seen, profile, routine, savedNickname, products]) => {
+      storage.loadScansUsed(),
+      storage.loadPremium(),
+    ]).then(([fav, hist, sett, seen, profile, routine, savedNickname, products, used, plan]) => {
       setFavorites(fav);
       setHistory(hist);
       setSettings({ ...DEFAULT_SETTINGS, ...sett });
@@ -64,6 +81,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setRoutineDone(routine.date === today() ? routine.done : []);
       setNickname(savedNickname);
       setRoutineProducts(products);
+      setScansUsed(used);
+      setPremium(plan);
       setReady(true);
     });
   }, []);
@@ -125,6 +144,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const consumeFreeScan = useCallback(() => {
+    setScansUsed((current) => {
+      const next = current + 1;
+      storage.saveScansUsed(next);
+      return next;
+    });
+  }, []);
+
+  const syncScansUsed = useCallback((used: number) => {
+    setScansUsed((current) => {
+      if (used <= current) return current;
+      storage.saveScansUsed(used);
+      return used;
+    });
+  }, []);
+
   const saveNickname = useCallback((name: string) => {
     setNickname(name);
     storage.saveNickname(name);
@@ -141,6 +176,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       routineDone,
       routineProducts,
       nickname,
+      scansUsed,
+      freeScansLeft: freeScansLeftOf(scansUsed),
+      premium,
+      canScan: canScanWith(scansUsed, premium),
+      consumeFreeScan,
+      syncScansUsed,
       isFavorite: (barcode) => favorites.some((f) => f.barcode === barcode),
       toggleFavorite,
       recordScan,
@@ -153,7 +194,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveNickname,
     }),
     [
-      ready, welcomeSeen, favorites, history, settings, skinProfile, routineDone, routineProducts, nickname, toggleFavorite, recordScan, clearHistory,
+      ready, welcomeSeen, favorites, history, settings, skinProfile, routineDone, routineProducts, nickname, scansUsed, premium, consumeFreeScan, syncScansUsed, toggleFavorite, recordScan, clearHistory,
       updateSettings, markWelcomeSeen, saveSkinProfile, toggleRoutineStep, setRoutineProduct, saveNickname,
     ]
   );

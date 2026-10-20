@@ -1,6 +1,7 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Text, TextInput } from "./Text";
 import { analyzeText, scoreBlockers } from "../api";
 import { parseIngredients } from "../ingredients";
 import { colors } from "../theme";

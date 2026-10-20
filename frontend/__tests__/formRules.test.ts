@@ -1,4 +1,4 @@
-import { displayName, isEmail, PASSWORD_RULE, passwordProblem } from "../src/formRules";
+import { displayName, isEmail, nameProblem, PASSWORD_RULE, passwordProblem } from "../src/formRules";
 
 describe("isEmail", () => {
   it("accepts ordinary addresses and rejects obvious typos", () => {
@@ -29,5 +29,15 @@ describe("displayName", () => {
   it("prefers the full name, then the e-mail's name part", () => {
     expect(displayName({ firstName: "Ayşe", lastName: "Nur", email: "a@b.co" })).toBe("Ayşe Nur");
     expect(displayName({ firstName: "", lastName: "", email: "ayse@b.co" })).toBe("ayse");
+  });
+});
+
+describe("nameProblem", () => {
+  it("accepts real names", () => {
+    for (const ok of ["Gizem", "Çağla Ömür", "Şule", "İpek", "Ali-Can", "D'Arcy"]) expect(nameProblem(ok, "Ad")).toBeNull();
+  });
+
+  it("rejects digits, symbols, gibberish and too short names", () => {
+    for (const bad of ["", "A", "Ali1", "123", "Gizem!", "aaa", "xyz", "qwrtp"]) expect(nameProblem(bad, "Ad")).not.toBeNull();
   });
 });

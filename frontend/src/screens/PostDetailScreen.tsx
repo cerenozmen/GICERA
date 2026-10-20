@@ -1,7 +1,8 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Text, TextInput } from "../components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../AppContext";
 import { Avatar, BackButton, EmptyState, PrimaryButton, Tag } from "../components/common";

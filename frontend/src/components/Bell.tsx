@@ -24,13 +24,14 @@ export function Bell({ onPress }: { onPress: () => void }) {
 
   return (
     <Pressable onPress={onPress} hitSlop={10} style={styles.bell} accessibilityLabel="Bildirimler">
-      <Ionicons name="notifications-outline" size={26} color={colors.text} />
+      <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
       {unread && <View style={styles.dot} />}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  bell: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  dot: { position: "absolute", top: 7, right: 9, width: 9, height: 9, borderRadius: 5, backgroundColor: colors.accent, borderWidth: 1.5, borderColor: colors.bg },
+  // A solid disc, so the bell reads on any page background.
+  bell: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
+  dot: { position: "absolute", top: 8, right: 10, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accent, borderWidth: 1.5, borderColor: "#FFFFFF" },
 });

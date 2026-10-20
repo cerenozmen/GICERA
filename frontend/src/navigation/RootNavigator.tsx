@@ -18,6 +18,7 @@ import { PregnancyModeScreen } from "../screens/PregnancyModeScreen";
 import { ProductDetailScreen } from "../screens/ProductDetailScreen";
 import { ProductNotFoundScreen } from "../screens/ProductNotFoundScreen";
 import { ProductSearchScreen } from "../screens/ProductSearchScreen";
+import { PaywallScreen } from "../screens/PaywallScreen";
 import { ScanScreen } from "../screens/ScanScreen";
 import { SkinQuizScreen } from "../screens/SkinQuizScreen";
 import { WelcomeScreen } from "../screens/WelcomeScreen";
@@ -43,6 +44,7 @@ export function RootNavigator() {
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen name="Scan" component={ScanScreen} options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="Paywall" component={PaywallScreen} options={{ presentation: "fullScreenModal", animation: "slide_from_bottom", gestureEnabled: false }} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <Stack.Screen name="ProductNotFound" component={ProductNotFoundScreen} />
       <Stack.Screen name="IngredientAnalysis" component={IngredientAnalysisScreen} />

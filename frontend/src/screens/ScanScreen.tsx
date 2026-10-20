@@ -1,7 +1,8 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Pressable, StyleSheet, View } from "react-native";
+import { Text, TextInput } from "../components/Text";
 import { Camera } from "react-native-camera-kit";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCameraPermission } from "react-native-vision-camera";
@@ -13,7 +14,7 @@ import { colors } from "../theme";
 
 export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParamList, "Scan">) {
   const insets = useSafeAreaInsets();
-  const { recordScan } = useApp();
+  const { recordScan, canScan, consumeFreeScan, freeScansLeft, premium } = useApp();
   const { hasPermission, requestPermission } = useCameraPermission();
   const [torch, setTorch] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -24,12 +25,18 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
 
   async function handleCode(code: string) {
     if (busy || code === lastCode.current) return;
+    // Free reads used up: the paywall takes over the whole screen instead of looking the code up.
+    if (!canScan) {
+      navigation.replace("Paywall");
+      return;
+    }
     lastCode.current = code;
     setBusy(true);
     setMessage(null);
     try {
       const result = await lookupBarcode(code);
       if (result.found) {
+        consumeFreeScan();
         recordScan(result.product);
         navigation.replace("ProductDetail", { barcode: code, product: result.product });
         return;
@@ -101,7 +108,7 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
           </View>
         </View>
         <View style={styles.viewerBottom}>
-          {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.hint}>{message ?? "Barkodu çerçeveye hizala, otomatik taranacaktır."}</Text>}
+          {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.hint}>{message ?? (premium ? "Barkodu çerçeveye hizala, otomatik taranacaktır." : `Barkodu çerçeveye hizala. Ücretsiz hakkın: ${freeScansLeft}`)}</Text>}
           <Pressable style={styles.torchPill} onPress={() => setTorch((t) => !t)}>
             <Ionicons name={torch ? "flash" : "flash-outline"} size={14} color={colors.accent} />
             <Text style={styles.torchText}>{torch ? "Işığı kapat" : "Işığı aç"}</Text>
@@ -115,7 +122,7 @@ export function ScanScreen({ navigation }: NativeStackScreenProps<RootStackParam
             <TextInput
               style={styles.input}
               placeholder="Barkod numarası"
-              placeholderTextColor="#aaa"
+              placeholderTextColor={colors.muted}
               keyboardType="number-pad"
               autoFocus
               value={manualCode}
@@ -157,7 +164,7 @@ const styles = StyleSheet.create({
   segmentOn: { backgroundColor: "#fff" },
   segmentText: { color: "#fff", fontSize: 14 },
   segmentTextOn: { color: colors.text, fontWeight: "600" },
-  viewer: { flex: 1, marginHorizontal: 16, borderRadius: 24, overflow: "hidden", backgroundColor: "#26332C" },
+  viewer: { flex: 1, marginHorizontal: 16, borderRadius: 24, overflow: "hidden", backgroundColor: colors.scanBg },
   frameWrap: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", paddingBottom: 90 },
   frame: { width: "80%", height: 180, justifyContent: "center" },
   corner: { position: "absolute", width: CORNER, height: CORNER, borderColor: colors.accent },

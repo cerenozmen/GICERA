@@ -4,6 +4,7 @@ import { Alert } from "react-native";
 import { useAuth } from "../AuthContext";
 import { PrimaryButton } from "../components/common";
 import { Field, FormMessage, FormPage } from "../components/Field";
+import { nameProblem } from "../formRules";
 import { RootStackParamList } from "../navigation/types";
 import { useSubmit } from "../useSubmit";
 
@@ -15,6 +16,8 @@ export function PersonalInfoScreen({ navigation }: NativeStackScreenProps<RootSt
 
   function save() {
     form.run(async () => {
+      const problem = nameProblem(firstName, "Ad") ?? nameProblem(lastName, "Soyad");
+      if (problem) throw new Error(problem);
       await updateName(firstName, lastName);
       Alert.alert("Kaydedildi", "Kişisel bilgilerin güncellendi.", [{ text: "Tamam", onPress: () => navigation.goBack() }]);
     });

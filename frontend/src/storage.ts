@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AuthSession, AuthUser } from "./authApi";
 import { RoutineProduct } from "./routine";
+import type { PlanId } from "./subscription";
 import { Product } from "./types";
 
 export interface ProductSnapshot {
@@ -68,6 +69,8 @@ const KEYS = {
   routineProducts: "gicera.routineProducts",
   forumDevice: "gicera.forumDevice",
   auth: "gicera.auth",
+  scansUsed: "gicera.scansUsed",
+  premium: "gicera.premium",
 };
 
 async function read<T>(key: string, fallback: T): Promise<T> {
@@ -110,6 +113,10 @@ export const storage = {
   saveForumDevice: (value: string) => write(KEYS.forumDevice, value),
   loadAuth: () => read<StoredAuth | null>(KEYS.auth, null),
   saveAuth: (value: StoredAuth | null) => write(KEYS.auth, value),
+  loadScansUsed: () => read<number>(KEYS.scansUsed, 0),
+  saveScansUsed: (value: number) => write(KEYS.scansUsed, value),
+  /** The active plan, once purchases exist (nothing sets it yet). */
+  loadPremium: () => read<PlanId | null>(KEYS.premium, null),
 };
 
 export function toSnapshot(product: Product): ProductSnapshot {

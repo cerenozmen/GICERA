@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { bearerToken, cleanName, isRecoveryToken, PASSWORD_RULE, passwordProblem, toAuthFailure } from "./authRules";
+import { bearerToken, cleanName, nameProblem, isRecoveryToken, PASSWORD_RULE, passwordProblem, toAuthFailure } from "./authRules";
 
 describe("toAuthFailure", () => {
   it("maps known Supabase codes to Turkish messages and a status", () => {
@@ -56,5 +56,24 @@ describe("cleanName", () => {
   it("trims, collapses spaces and caps the length", () => {
     assert.equal(cleanName("  Ayşe   Nur "), "Ayşe Nur");
     assert.equal(cleanName("a".repeat(100)).length, 40);
+  });
+});
+
+describe("nameProblem", () => {
+  it("accepts real names, Turkish letters, spaces, hyphens and apostrophes", () => {
+    for (const ok of ["Gizem", "Çağla Ömür", "Şule", "İpek", "Ayşe Nur", "Ali-Can", "D'Arcy", "Ece"]) {
+      assert.equal(nameProblem(ok, "Ad"), null, ok);
+    }
+  });
+
+  it("rejects digits, symbols, gibberish, and too short or empty names", () => {
+    for (const bad of ["", "  ", "A", "Ali1", "123", "Gizem!", "a@b", "aaa", "Gizeeem", "xyz", "qwrtp", "😀😀"]) {
+      assert.notEqual(nameProblem(bad, "Ad"), null, bad);
+    }
+    assert.notEqual(nameProblem("a".repeat(41), "Ad"), null);
+  });
+
+  it("names the field in the message", () => {
+    assert.match(nameProblem("", "Soyad")!, /^Soyad/);
   });
 });

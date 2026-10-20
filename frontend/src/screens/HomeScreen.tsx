@@ -3,15 +3,18 @@ import { CompositeScreenProps } from "@react-navigation/native";
 import { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "../components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../AppContext";
+import { useAuth } from "../AuthContext";
 import { Bell } from "../components/Bell";
 import { ProgressRing } from "../components/ProgressRing";
 import { ScoreChip, Thumb } from "../components/common";
 import { resultState } from "../ingredients";
 import { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { Period, ROUTINES } from "../routine";
+import { useLayout } from "../responsive";
 import { colors } from "../theme";
 import { humidityAdvice, loadSkinWeather, SkinWeather, uvAdvice, uvLevel } from "../weather";
 
@@ -36,7 +39,10 @@ function routineMood(done: number, total: number): { title: string; text: string
 
 export function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { history, skinProfile, routineDone, routineProducts, toggleRoutineStep, nickname } = useApp();
+  const { user } = useAuth();
+  const layout = useLayout();
+  const firstName = user?.firstName?.trim() || null;
+  const { history, skinProfile, routineDone, routineProducts, toggleRoutineStep } = useApp();
   const [period, setPeriod] = useState<Period>(new Date().getHours() < 15 ? "Sabah" : "Akşam");
   const [weather, setWeather] = useState<SkinWeather | null | "loading">("loading");
   const steps = ROUTINES[period];
@@ -57,12 +63,10 @@ export function HomeScreen({ navigation }: Props) {
       <View style={styles.pad}>
         <View style={styles.headRow}>
           <View style={styles.flex}>
-            <Text style={styles.hello}>Merhaba,</Text>
-            <Text style={styles.greeting}>{`${greeting()}${nickname ? `, ${nickname}` : ""}!`}</Text>
+            <Text style={styles.hello}>{firstName ? `Merhaba, ${firstName}` : "Merhaba,"}</Text>
+            <Text style={styles.greeting}>{`${greeting()}!`}</Text>
           </View>
-          <View style={styles.bellWrap}>
-            <Bell onPress={() => navigation.navigate("Notifications")} />
-          </View>
+          <Bell onPress={() => navigation.navigate("Notifications")} />
         </View>
 
         <Pressable style={styles.profileCard} onPress={() => (skinProfile ? navigation.navigate("Profile") : navigation.navigate("SkinQuiz"))}>
@@ -77,7 +81,7 @@ export function HomeScreen({ navigation }: Props) {
         </Pressable>
 
         <View style={styles.statusCard}>
-          <ProgressRing size={74} stroke={6} progress={allDone / allSteps.length} color="#8CC79A" track="rgba(255,255,255,0.18)">
+          <ProgressRing size={74} stroke={6} progress={allDone / allSteps.length} color={colors.primaryMint} track="rgba(255,255,255,0.18)">
             <Text style={styles.ringText}>{percent}</Text>
           </ProgressRing>
           <View style={styles.flex}>
@@ -89,7 +93,7 @@ export function HomeScreen({ navigation }: Props) {
 
         <View style={styles.tiles}>
           <Pressable style={[styles.tile, { backgroundColor: colors.peach }]} onPress={() => weather === null && loadSkinWeather().then(setWeather)}>
-            <View style={[styles.tileIcon, { backgroundColor: "#F7C9B0" }]}>
+            <View style={[styles.tileIcon, { backgroundColor: colors.accentTint }]}>
               <Ionicons name="sunny-outline" size={20} color={colors.accent} />
             </View>
             <View style={styles.flex}>
@@ -101,7 +105,7 @@ export function HomeScreen({ navigation }: Props) {
             </View>
           </Pressable>
           <Pressable style={[styles.tile, { backgroundColor: colors.primaryLight }]} onPress={() => weather === null && loadSkinWeather().then(setWeather)}>
-            <View style={[styles.tileIcon, { backgroundColor: "#CFE0D2" }]}>
+            <View style={[styles.tileIcon, { backgroundColor: colors.primaryTint }]}>
               <Ionicons name="water-outline" size={20} color={colors.primary} />
             </View>
             <View style={styles.flex}>
@@ -150,7 +154,7 @@ export function HomeScreen({ navigation }: Props) {
       {history.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hList}>
           {history.slice(0, 8).map((item) => (
-            <Pressable key={item.barcode} style={styles.miniCard} onPress={() => navigation.navigate("ProductDetail", { barcode: item.barcode, product: item.product })}>
+            <Pressable key={item.barcode} style={[styles.miniCard, { width: layout.scale(140) }]} onPress={() => navigation.navigate("ProductDetail", { barcode: item.barcode, product: item.product })}>
               <Thumb uri={item.imageUrl} size={64} />
               <Text style={styles.miniTitle} numberOfLines={2}>
                 {item.productName ?? "İsimsiz ürün"}
@@ -170,8 +174,7 @@ const styles = StyleSheet.create({
   pad: { paddingHorizontal: 20 },
   flex: { flex: 1 },
   headRow: { flexDirection: "row", alignItems: "flex-start" },
-  bellWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#EFEAE3", alignItems: "center", justifyContent: "center" },
-  hello: { fontSize: 16, color: colors.text },
+  hello: { fontSize: 18, fontWeight: "600", color: colors.text },
   greeting: { fontSize: 26, fontWeight: "700", color: colors.text, marginTop: 2 },
   profileCard: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.peach, borderRadius: 18, padding: 14, marginTop: 18 },
   profileIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
@@ -199,9 +202,9 @@ const styles = StyleSheet.create({
   tabTextOn: { color: colors.primary, fontWeight: "600" },
   step: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
   divider: { borderTopWidth: 1, borderTopColor: colors.border },
-  check: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: "#CFC8BE", alignItems: "center", justifyContent: "center" },
+  check: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: colors.line, alignItems: "center", justifyContent: "center" },
   checkOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: "#DDD6CC", alignItems: "center", justifyContent: "center" },
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: colors.line, alignItems: "center", justifyContent: "center" },
   radioOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   stepTitle: { fontSize: 15, color: colors.text, fontWeight: "600" },
   stepText: { fontSize: 12, color: colors.muted, marginTop: 1 },

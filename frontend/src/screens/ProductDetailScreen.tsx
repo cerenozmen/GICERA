@@ -2,7 +2,8 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import type { IconName } from "../components/icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "../components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { lookupBarcode } from "../api";
 import { useApp } from "../AppContext";
@@ -15,7 +16,8 @@ import { skinFit } from "../skinFit";
 import { freeFromChecks, lowerTr, parseIngredients, resultState, summaryText } from "../ingredients";
 import { RootStackParamList } from "../navigation/types";
 import { Period, ROUTINES } from "../routine";
-import { colors, serif } from "../theme";
+import { MAX_CONTENT_WIDTH } from "../responsive";
+import { colors, risk, serif } from "../theme";
 import { CleanRating, FlaggedIngredient, Product, RestrictionType } from "../types";
 
 export const TYPE_LABEL: Record<RestrictionType, string> = {
@@ -26,16 +28,16 @@ export const TYPE_LABEL: Record<RestrictionType, string> = {
 };
 
 const VERDICT: Record<CleanRating, { title: string; why: string; icon: IconName; color: string }> = {
-  clean: { title: "Cildine uygun", why: "Neden uygun?", icon: "checkmark-circle", color: "#3E8E5E" },
-  moderate: { title: "Dikkatli kullan", why: "Neden dikkat?", icon: "alert-circle", color: colors.accent },
-  riskli: { title: "Önerilmez", why: "Neden önerilmez?", icon: "close-circle", color: colors.danger },
+  clean: { title: "Cildine uygun", why: "Neden uygun?", icon: "checkmark-circle", color: risk.ok },
+  moderate: { title: "Dikkatli kullan", why: "Neden dikkat?", icon: "alert-circle", color: risk.caution },
+  riskli: { title: "Önerilmez", why: "Neden önerilmez?", icon: "close-circle", color: risk.bad },
 };
 
 /** The score card, in the home screen's green-card style; the ring takes the rating's tone. */
 const SCORE_TONE: Record<CleanRating, { ring: string; title: string; text: string }> = {
-  clean: { ring: "#8CC79A", title: "Temiz", text: "İçeriği genel olarak güvenli görünüyor." },
-  moderate: { ring: "#F5A26B", title: "Orta", text: "Dikkat edilmesi gereken içerikler var." },
-  riskli: { ring: "#E8806F", title: "Riskli", text: "Riskli veya kısıtlı içerikler bulundu." },
+  clean: { ring: risk.okRing, title: "Temiz", text: "İçeriği genel olarak güvenli görünüyor." },
+  moderate: { ring: risk.warnRing, title: "Orta", text: "Dikkat edilmesi gereken içerikler var." },
+  riskli: { ring: risk.badRing, title: "Riskli", text: "Riskli veya kısıtlı içerikler bulundu." },
 };
 
 /** Only banned substances are "avoid"; restricted ones are allowed within limits, so they count as "caution". */
@@ -116,7 +118,7 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
               </View>
               <Text style={styles.verdictText}>Skor hesaplanamadı.</Text>
               <View style={styles.notice}>
-                <Ionicons name="information-circle-outline" size={22} color={colors.accent} />
+                <Ionicons name="information-circle-outline" size={22} color={risk.caution} />
                 <Text style={styles.noticeText}>{blockedMessage(product)}</Text>
               </View>
               {!!product.rescanRoute && (
@@ -141,7 +143,7 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
             <>
               <Text style={styles.verdict}>{product.productName ?? "İsimsiz ürün"}</Text>
               <View style={styles.notice}>
-                <Ionicons name="information-circle-outline" size={22} color={colors.accent} />
+                <Ionicons name="information-circle-outline" size={22} color={risk.caution} />
                 <Text style={styles.noticeText}>Bu ürünün içerik listesi henüz girilmemiş, bu yüzden temizlik skoru hesaplanamadı.</Text>
               </View>
               <PrimaryButton
@@ -196,9 +198,9 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
         </View>
 
         <View style={styles.stats}>
-          <Stat value={beneficial.length} label="Faydalı içerik" color="#3E8E5E" />
-          <Stat value={caution.length} label="Dikkat edilen içerik" color={colors.accent} />
-          <Stat value={avoid.length} label="Kaçınılması gereken" color={avoid.length ? colors.danger : colors.text} />
+          <Stat value={beneficial.length} label="Faydalı içerik" color={risk.ok} />
+          <Stat value={caution.length} label="Dikkat edilen içerik" color={risk.caution} />
+          <Stat value={avoid.length} label="Kaçınılması gereken" color={avoid.length ? risk.bad : colors.text} />
         </View>
 
         {isCustom && <Text style={styles.customNote}>Bu analiz senin çektiğin içerik listesine göre yapıldı, kayıtlı bir ürün değil.</Text>}
@@ -217,7 +219,7 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
           <Text style={styles.cardTitle}>{verdict.why}</Text>
           {reasons.map((r, i) => (
             <View key={i} style={styles.reason}>
-              <Ionicons name={r.ok ? "checkmark-circle-outline" : "alert-circle-outline"} size={17} color={r.ok ? "#3E8E5E" : colors.accent} />
+              <Ionicons name={r.ok ? "checkmark-circle-outline" : "alert-circle-outline"} size={17} color={r.ok ? risk.ok : risk.caution} />
               <Text style={styles.reasonText}>{r.text}</Text>
             </View>
           ))}
@@ -352,18 +354,18 @@ function SkinFitCard({ ingredients, onQuiz }: { ingredients: string[]; onQuiz: (
       <Text style={styles.fitBasis}>{fit.basis.join(" · ")}</Text>
       {fit.avoid.length > 0 ? (
         <View style={styles.reason}>
-          <Ionicons name="alert-circle-outline" size={17} color={colors.accent} />
+          <Ionicons name="alert-circle-outline" size={17} color={risk.caution} />
           <Text style={styles.reasonText}>{`Sana uygun olmayabilir: ${list(fit.avoid)}.`}</Text>
         </View>
       ) : (
         <View style={styles.reason}>
-          <Ionicons name="checkmark-circle-outline" size={17} color="#3E8E5E" />
+          <Ionicons name="checkmark-circle-outline" size={17} color={risk.ok} />
           <Text style={styles.reasonText}>Cilt profiline göre dikkat etmen gereken bir içerik bulunmadı.</Text>
         </View>
       )}
       {fit.good.length > 0 && (
         <View style={styles.reason}>
-          <Ionicons name="leaf-outline" size={17} color="#3E8E5E" />
+          <Ionicons name="leaf-outline" size={17} color={risk.ok} />
           <Text style={styles.reasonText}>{`Cildine iyi gelebilir: ${list(fit.good)}.`}</Text>
         </View>
       )}
@@ -394,7 +396,7 @@ function FlaggedList({ items }: { items: FlaggedIngredient[] }) {
 function FlaggedRow({ item, open, onExplain }: { item: FlaggedIngredient; open: boolean; onExplain: () => void }) {
   const { settings } = useApp();
   const avoid = isAvoid(item) || (item.restrictionType === "pregnancy_unsafe" && settings.highlightRisky);
-  const tone = avoid ? colors.danger : colors.accent;
+  const tone = avoid ? risk.bad : risk.caution;
   return (
     <View style={styles.flagRow}>
       <Ionicons name="flask-outline" size={20} color={tone} />
@@ -402,7 +404,7 @@ function FlaggedRow({ item, open, onExplain }: { item: FlaggedIngredient; open: 
         <Text style={styles.flagName}>{item.inciName}</Text>
         <Text style={styles.flagNote}>{settings.showNotes && item.notes ? item.notes : TYPE_LABEL[item.restrictionType]}</Text>
         <View style={styles.flagActions}>
-          <View style={[styles.badge, { backgroundColor: avoid ? colors.dangerLight : colors.accentLight }]}>
+          <View style={[styles.badge, { backgroundColor: avoid ? risk.badBg : risk.cautionBg }]}>
             <Ionicons name={avoid ? "close-circle" : "alert-circle"} size={11} color={tone} />
             <Text style={[styles.badgeText, { color: tone }]}>{avoid ? "Kaçın" : "Dikkat"}</Text>
           </View>
@@ -420,12 +422,12 @@ const styles = StyleSheet.create({
   loading: { marginTop: 80 },
   content: { paddingHorizontal: 20, gap: 14, paddingBottom: 40 },
   topRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: -8 },
-  photo: { width: 110, height: 110, borderRadius: 55, backgroundColor: "#F1ECE5", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  photo: { width: 110, height: 110, borderRadius: 55, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   verdictRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   verdict: { fontFamily: serif, fontSize: 30, color: colors.text, flexShrink: 1 },
   verdictText: { color: colors.muted, fontSize: 14, lineHeight: 20, marginTop: -6 },
   nameLine: { color: colors.muted, fontSize: 12, marginTop: -6 },
-  scoreCard: { flexDirection: "row", alignItems: "center", gap: 18, backgroundColor: colors.primary, borderRadius: 20, padding: 18 },
+  scoreCard: { flexDirection: "row", alignItems: "center", gap: 18, backgroundColor: risk.card, borderRadius: 20, padding: 18 },
   scoreValue: { color: "#fff", fontSize: 28, fontWeight: "700", lineHeight: 32 },
   scoreMax: { color: "rgba(255,255,255,0.75)", fontSize: 11, marginTop: -2 },
   scoreLabel: { fontSize: 12, color: "rgba(255,255,255,0.8)" },
@@ -455,13 +457,13 @@ const styles = StyleSheet.create({
   linkRow: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 16 },
   linkText: { flex: 1, fontSize: 14, color: colors.text },
   sources: { textAlign: "center", fontSize: 13, color: colors.muted, textDecorationLine: "underline" },
-  notice: { flexDirection: "row", gap: 10, backgroundColor: colors.accentLight, borderRadius: 16, padding: 14, alignItems: "flex-start" },
+  notice: { flexDirection: "row", gap: 10, backgroundColor: risk.cautionBg, borderRadius: 16, padding: 14, alignItems: "flex-start" },
   noticeText: { flex: 1, color: colors.text, lineHeight: 20, fontSize: 14 },
   footer: { position: "absolute", left: 0, right: 0, bottom: 0, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingTop: 12, backgroundColor: colors.bg },
-  roundButton: { width: 54, height: 54, borderRadius: 27, borderWidth: 1, borderColor: "#D9D2C8", backgroundColor: colors.card, alignItems: "center", justifyContent: "center" },
+  roundButton: { width: 54, height: 54, borderRadius: 27, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, alignItems: "center", justifyContent: "center" },
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
-  sheet: { backgroundColor: colors.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 10 },
-  grabber: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: "#D8D2C8", marginBottom: 14 },
+  sheet: { width: "100%", maxWidth: MAX_CONTENT_WIDTH, alignSelf: "center", backgroundColor: colors.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 10 },
+  grabber: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, marginBottom: 14 },
   sheetTitle: { fontFamily: serif, fontSize: 22, color: colors.text, marginBottom: 6 },
   sheetGroup: { marginTop: 10 },
   sheetPeriod: { fontSize: 13, color: colors.muted, marginBottom: 6 },

@@ -22,6 +22,8 @@ export interface AuthUser {
   lastName: string;
   /** Null until the account has taken the skin quiz. */
   skinProfile: SkinProfile | null;
+  /** Free barcode reads this account has used (0 for a new one). */
+  scansUsed: number;
 }
 
 export interface AuthSession {
@@ -56,6 +58,7 @@ function toUser(user: User): AuthUser {
     firstName: typeof meta.first_name === "string" ? meta.first_name : googleFirst,
     lastName: typeof meta.last_name === "string" ? meta.last_name : googleRest.join(" "),
     skinProfile: meta.skin_profile && typeof meta.skin_profile === "object" ? (meta.skin_profile as SkinProfile) : null,
+    scansUsed: typeof meta.scans_used === "number" && meta.scans_used > 0 ? Math.floor(meta.scans_used) : 0,
   };
 }
 
@@ -73,8 +76,9 @@ function unwrap<T extends { error: { code?: string; status?: number; message?: s
   return result;
 }
 
-export async function signUp(email: string, password: string): Promise<AuthResult> {
-  const { data } = unwrap(await client().auth.signUp({ email, password, options: { emailRedirectTo: RECOVERY_REDIRECT } }));
+export async function signUp(email: string, password: string, firstName = "", lastName = ""): Promise<AuthResult> {
+  const data_ = { first_name: cleanName(firstName), last_name: cleanName(lastName) };
+  const { data } = unwrap(await client().auth.signUp({ email, password, options: { emailRedirectTo: RECOVERY_REDIRECT, data: data_ } }));
   if (!data.user) throw new AuthFailure(502, "Hesap oluşturulamadı. Tekrar dene.");
   return { user: toUser(data.user), session: toSession(data.session) };
 }
@@ -156,6 +160,17 @@ export async function updateSkinProfile(accessToken: string, profile: SkinProfil
   const meta = (existing.user?.user_metadata ?? {}) as Record<string, unknown>;
   const { data } = unwrap(await admin.auth.admin.updateUserById(current.id, { user_metadata: { ...meta, skin_profile: profile } }));
   if (!data.user) throw new AuthFailure(502, "Cilt profili kaydedilemedi.");
+  return toUser(data.user);
+}
+
+/** Raises the account's used free-read count to `used`. Never lowers it, so a stale phone can't give reads back. */
+export async function recordScansUsed(accessToken: string, used: number): Promise<AuthUser> {
+  const current = await userFromToken(accessToken);
+  const { data: existing } = await admin.auth.admin.getUserById(current.id);
+  const meta = (existing.user?.user_metadata ?? {}) as Record<string, unknown>;
+  const before = typeof meta.scans_used === "number" ? meta.scans_used : 0;
+  const { data } = unwrap(await admin.auth.admin.updateUserById(current.id, { user_metadata: { ...meta, scans_used: Math.max(before, used) } }));
+  if (!data.user) throw new AuthFailure(502, "Tarama hakkı kaydedilemedi.");
   return toUser(data.user);
 }
 
