@@ -1,0 +1,23 @@
+name: Supabase keep-alive
+
+# Free-plan Supabase projects are paused after ~7 days without activity.
+# A cheap read twice a week keeps the project active.
+on:
+  schedule:
+    - cron: "0 9 * * 1,4"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          curl --fail-with-body --retry 3 --retry-delay 10 -sS \
+            "$SUPABASE_URL/rest/v1/cosing_ingredients?select=*&limit=1" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -o /dev/null -w "HTTP %{http_code}\n"
