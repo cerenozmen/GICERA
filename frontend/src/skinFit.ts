@@ -12,7 +12,7 @@ interface Group {
   pattern: RegExp;
 }
 
-const G = {
+export const G = {
   fragrance: { label: "Parfüm", pattern: /parf[uü]m|fragrance|perfume|\baroma\b/ },
   allergens: {
     label: "Parfüm alerjeni",

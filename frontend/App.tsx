@@ -8,6 +8,7 @@ import { RootStackParamList } from "./src/navigation/types";
 import { MAX_CONTENT_WIDTH } from "./src/responsive";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { parseRecoveryLink, RecoveryLink } from "./src/recoveryLink";
+import { DataSync } from "./src/DataSync";
 import { ScanQuotaSync } from "./src/ScanQuotaSync";
 import { SkinProfileSync } from "./src/SkinProfileSync";
 import { colors } from "./src/theme";
@@ -75,6 +76,7 @@ export default function App() {
               <Root />
               <SkinProfileSync />
               <ScanQuotaSync />
+              <DataSync />
               <StatusBar barStyle="dark-content" />
             </AuthProvider>
           </AppProvider>

@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config";
-import type { SkinProfile } from "./storage";
+import type { AccountData, SkinProfile } from "./storage";
 
 export interface AuthUser {
   id: string;
@@ -24,6 +24,12 @@ export interface AuthResult {
   /** null when the account still has to confirm its e-mail. */
   session: AuthSession | null;
   needsConfirmation?: boolean;
+}
+
+export interface StoredData {
+  data: AccountData;
+  /** When the data last changed on a phone (ms). */
+  updatedAt: number;
 }
 
 /** A failed account call: `status` tells an expired session (401) from a wrong password (403) or a dead connection (0). */
@@ -63,6 +69,10 @@ export const authApi = {
     request<{ user: AuthUser }>("PATCH", "/profile", { firstName, lastName }, token),
   saveScansUsed: (token: string, used: number) => request<{ user: AuthUser }>("PUT", "/scans", { used }, token),
   updateSkinProfile: (token: string, profile: SkinProfile) => request<{ user: AuthUser }>("PUT", "/skin-profile", profile, token),
+  /** The account's saved phone data, or null when none was saved yet. */
+  getData: async (token: string) => (await request<{ stored: StoredData | null }>("GET", "/data", undefined, token)).stored,
+  putData: async (token: string, data: AccountData, updatedAt: number) =>
+    (await request<{ stored: StoredData }>("PUT", "/data", { data, updatedAt }, token)).stored,
   changeEmail: (token: string, currentPassword: string, newEmail: string) =>
     request<{ ok: true }>("POST", "/email", { currentPassword, newEmail }, token),
   changePassword: (token: string, currentPassword: string, newPassword: string) =>

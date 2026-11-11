@@ -154,6 +154,21 @@ async function getExplanation(name: string): Promise<IngredientExplanation> {
   return data as IngredientExplanation;
 }
 
+/** A short Turkish name saying what the product is, or null when the server can't tell (or can't be reached). */
+export async function suggestProductName(product: { productName: string | null; brands: string | null; ingredientsText: string | null }): Promise<string | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/ingredients/product-name`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(product),
+    });
+    if (!response.ok) return null;
+    return ((await response.json()) as { name?: string }).name ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** One row of an ingredient list as the server reads it (backend ingredientDetails.ts). */
 export interface IngredientRowDetails {
   inciName: string | null;

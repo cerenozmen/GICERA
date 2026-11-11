@@ -3,6 +3,7 @@ import { z } from "zod";
 import { DISPOSABLE_MESSAGE, isDisposableEmail } from "../data/disposableDomains";
 import { AuthFailure, bearerToken, nameProblem, PASSWORD_MAX, passwordProblem } from "../services/authRules";
 import * as auth from "../services/authService";
+import * as userData from "../services/userDataService";
 import { createRateLimiter } from "../services/forumRules";
 import { asyncHandler } from "../utils/asyncHandler";
 
@@ -55,6 +56,16 @@ const skinProfileBody = z.object({
   skinCondition: answer,
 });
 const scansBody = z.object({ used: z.number().int().min(0).max(1000) });
+const userDataBody = z.object({
+  data: z.object({
+    routineSteps: z.array(z.object({ key: z.string().max(60), title: z.string().max(60), text: z.string().max(200) })).max(50),
+    routineProducts: z.record(z.string().max(60), z.unknown()),
+    avoided: z.array(z.string().max(100)).max(100),
+    history: z.array(z.unknown()).max(20),
+    favorites: z.array(z.unknown()).max(200),
+  }),
+  updatedAt: z.number().int().min(0),
+});
 const emailBody = z.object({ currentPassword, newEmail: permanentEmail });
 const passwordBody = z.object({ currentPassword, newPassword: password });
 
@@ -181,6 +192,25 @@ authRouter.put(
     const body = accessToken ? parse(scansBody, req, res) : null;
     if (!accessToken || !body) return;
     res.json({ user: await auth.recordScansUsed(accessToken, body.used) });
+  })
+);
+
+authRouter.get(
+  "/data",
+  asyncHandler(async (req, res) => {
+    const accessToken = token(req, res);
+    if (!accessToken) return;
+    res.json({ stored: await userData.loadUserData(accessToken) });
+  })
+);
+
+authRouter.put(
+  "/data",
+  asyncHandler(async (req, res) => {
+    const accessToken = token(req, res);
+    const body = accessToken ? parse(userDataBody, req, res) : null;
+    if (!accessToken || !body) return;
+    res.json({ stored: await userData.saveUserData(accessToken, body.data, body.updatedAt) });
   })
 );
 

@@ -20,7 +20,7 @@ type Props = CompositeScreenProps<
 
 export function ProfileScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { history, favorites, settings, skinProfile, clearHistory } = useApp();
+  const { history, favorites, settings, skinProfile, avoided, clearHistory } = useApp();
   const { user, signOut } = useAuth();
 
   function confirmSignOut() {
@@ -113,6 +113,12 @@ export function ProfileScreen({ navigation }: Props) {
           icon="woman-outline"
           label={`Hamilelik Modu${settings.pregnancyMode ? " (aktif)" : ""}`}
           onPress={() => navigation.navigate("PregnancyMode")}
+          divider
+        />
+        <MenuRow
+          icon="alert-circle-outline"
+          label={`Kaçındığım İçerikler${avoided.length ? ` (${avoided.length})` : ""}`}
+          onPress={() => navigation.navigate("Allergens")}
           divider
         />
         <MenuRow icon="sparkles-outline" label="Tanıtımı tekrar göster" onPress={() => navigation.navigate("Welcome")} divider />

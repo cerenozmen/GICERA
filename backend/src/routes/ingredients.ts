@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createRateLimiter } from "../services/forumRules";
 import { describeIngredients } from "../services/ingredientDetails";
 import { ExplanationUnavailableError, explainIngredient } from "../services/ingredientExplanationService";
+import { ProductNameUnavailableError, suggestProductName } from "../services/productNameService";
 import { asyncHandler } from "../utils/asyncHandler";
 
 export const ingredientsRouter = Router();
@@ -59,3 +60,42 @@ ingredientsRouter.post("/details", (req, res) => {
   }
   res.json(describeIngredients(parsed.data.ingredients, parsed.data.flagged));
 });
+
+// Per client IP: 20 name suggestions a minute (each one is a Groq call).
+const allowName = createRateLimiter(20, 60_000);
+
+const nameSchema = z.object({
+  productName: z.string().max(300).nullish(),
+  brands: z.string().max(200).nullish(),
+  ingredientsText: z.string().max(5000).nullish(),
+});
+
+// POST /api/ingredients/product-name { productName?, brands?, ingredientsText? } -> { name } (404: can't tell what it is)
+ingredientsRouter.post(
+  "/product-name",
+  asyncHandler(async (req, res) => {
+    const parsed = nameSchema.safeParse(req.body);
+    if (!parsed.success || !(parsed.data.productName || parsed.data.ingredientsText)) {
+      res.status(400).json({ error: "Geçersiz istek." });
+      return;
+    }
+    if (!allowName(req.ip ?? "unknown")) {
+      res.status(429).json({ error: "Çok fazla istek. Biraz bekleyip tekrar dene." });
+      return;
+    }
+    try {
+      const name = await suggestProductName(parsed.data);
+      if (!name) {
+        res.status(404).json({ error: "Ürün adı çıkarılamadı." });
+        return;
+      }
+      res.json({ name });
+    } catch (err) {
+      if (err instanceof ProductNameUnavailableError) {
+        res.status(503).json({ error: "Ad şu an önerilemiyor." });
+        return;
+      }
+      throw err;
+    }
+  })
+);

@@ -15,8 +15,8 @@ import { isBeneficial } from "../ingredientInfo";
 import { skinFit } from "../skinFit";
 import { freeFromChecks, lowerTr, parseIngredients, resultState, summaryText } from "../ingredients";
 import { RootStackParamList } from "../navigation/types";
-import { Period, ROUTINES } from "../routine";
 import { MAX_CONTENT_WIDTH } from "../responsive";
+import { avoidedHits } from "../allergens";
 import { colors, risk, serif } from "../theme";
 import { CleanRating, FlaggedIngredient, Product, RestrictionType } from "../types";
 
@@ -54,7 +54,7 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
   const insets = useSafeAreaInsets();
   const { barcode } = route.params;
   const isCustom = barcode.startsWith("custom:");
-  const { isFavorite, toggleFavorite, recordScan, settings, setRoutineProduct } = useApp();
+  const { isFavorite, toggleFavorite, recordScan, settings, setRoutineProduct, avoided } = useApp();
   const [product, setProduct] = useState<Product | null>(route.params.product ?? null);
   const [status, setStatus] = useState<"loading" | "error" | "ready">(route.params.product ? "ready" : "loading");
   const [routineOpen, setRoutineOpen] = useState(false);
@@ -93,6 +93,8 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
   const favorite = isFavorite(product.barcode);
   const state = resultState(product);
   const tokens = parseIngredients(product.ingredientsText);
+  const avoidedFound = avoidedHits(avoided, tokens);
+  const avoidedCard = avoidedFound.length > 0 && <AvoidedCard hits={avoidedFound} />;
   const nameLine = [product.productName, product.brands].filter(Boolean).join(" · ");
 
   const top = (
@@ -117,6 +119,7 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
                 <Text style={styles.verdict}>Ürün içeriği okundu</Text>
               </View>
               <Text style={styles.verdictText}>Skor hesaplanamadı.</Text>
+              {avoidedCard}
               <View style={styles.notice}>
                 <Ionicons name="information-circle-outline" size={22} color={risk.caution} />
                 <Text style={styles.noticeText}>{blockedMessage(product)}</Text>
@@ -184,6 +187,8 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
             {nameLine}
           </Text>
         )}
+
+        {avoidedCard}
 
         <View style={styles.scoreCard}>
           <ProgressRing size={88} stroke={7} progress={(product.cleanScore ?? 0) / 100} color={SCORE_TONE[product.cleanRating].ring} track="rgba(255,255,255,0.18)">
@@ -264,26 +269,22 @@ export function ProductDetailScreen({ navigation, route }: NativeStackScreenProp
 
 function RoutineSheet({ visible, onClose, onPick }: { visible: boolean; onClose: () => void; onPick: (step: string, title: string) => void }) {
   const insets = useSafeAreaInsets();
-  const { routineProducts } = useApp();
+  const { routineProducts, routineSteps } = useApp();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
         <View style={styles.grabber} />
         <Text style={styles.sheetTitle}>Hangi adıma eklensin?</Text>
-        {(Object.keys(ROUTINES) as Period[]).map((period) => (
-          <View key={period} style={styles.sheetGroup}>
-            <Text style={styles.sheetPeriod}>{period}</Text>
-            {ROUTINES[period].map((s) => (
-              <Pressable key={s.key} style={styles.sheetRow} onPress={() => onPick(s.key, `${period} · ${s.title}`)}>
-                <Text style={styles.sheetStep}>{s.title}</Text>
-                <Text style={styles.sheetCurrent} numberOfLines={1}>
-                  {routineProducts[s.key]?.productName ?? ""}
-                </Text>
-                <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
-              </Pressable>
-            ))}
-          </View>
+        {routineSteps.length === 0 && <Text style={styles.sheetCurrent}>Önce Anasayfa'dan rutinine adım ekle.</Text>}
+        {routineSteps.map((s) => (
+          <Pressable key={s.key} style={styles.sheetRow} onPress={() => onPick(s.key, s.title)}>
+            <Text style={styles.sheetStep}>{s.title}</Text>
+            <Text style={styles.sheetCurrent} numberOfLines={1}>
+              {routineProducts[s.key]?.productName ?? ""}
+            </Text>
+            <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+          </Pressable>
         ))}
       </View>
     </Modal>
@@ -333,6 +334,21 @@ function LinkRow({ label, onPress }: { label: string; onPress: () => void }) {
  * "Cildine uygunluk": the ingredients that may not suit the user's skin profile and those that tend to
  * help it (skinFit.ts). Separate from the score, which is the same for everyone.
  */
+/** The red warning for ingredients the user said they avoid (Profil > Kaçındığım İçerikler). */
+function AvoidedCard({ hits }: { hits: { name: string; label: string }[] }) {
+  return (
+    <View style={styles.avoidedCard}>
+      <View style={styles.avoidedHead}>
+        <Ionicons name="warning" size={20} color={risk.bad} />
+        <Text style={styles.avoidedTitle}>Kaçındığın içerik var</Text>
+      </View>
+      {hits.map((h) => (
+        <Text key={h.name} style={styles.avoidedRow}>{`• ${h.name} (${h.label})`}</Text>
+      ))}
+    </View>
+  );
+}
+
 function SkinFitCard({ ingredients, onQuiz }: { ingredients: string[]; onQuiz: () => void }) {
   const { skinProfile } = useApp();
   const fit = skinFit(skinProfile, ingredients);
@@ -438,6 +454,10 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 26, fontWeight: "600" },
   statLabel: { fontSize: 12, color: colors.muted, marginTop: 2 },
   customNote: { color: colors.muted, fontSize: 13, lineHeight: 18 },
+  avoidedCard: { backgroundColor: risk.badBg, borderWidth: 1, borderColor: risk.badRing, borderRadius: 18, padding: 16, gap: 6 },
+  avoidedHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  avoidedTitle: { fontSize: 15, fontWeight: "700", color: risk.bad },
+  avoidedRow: { fontSize: 13, color: colors.text, lineHeight: 19 },
   card: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: 16, gap: 10 },
   cardTitle: { fontSize: 15, fontWeight: "600", color: colors.text },
   bullet: { fontSize: 14, color: colors.text },

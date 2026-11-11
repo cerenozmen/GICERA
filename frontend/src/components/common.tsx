@@ -8,6 +8,7 @@ import { ProductSnapshot } from "../storage";
 import { colors, ratingStyle, serif, shadow } from "../theme";
 import { resultState } from "../ingredients";
 import { avatarTone } from "../discussion";
+import { displayName } from "../displayName";
 import { CleanRating } from "../types";
 
 export function Thumb({ uri, size = 56 }: { uri: string | null; size?: number }) {
@@ -61,13 +62,13 @@ export function ScreenHeader({ title, onBack, right }: { title?: string; onBack?
   );
 }
 
-export function ProductRow({ item, onPress }: { item: ProductSnapshot; onPress: () => void }) {
+export function ProductRow({ item, onPress, onLongPress }: { item: ProductSnapshot; onPress: () => void; onLongPress?: () => void }) {
   return (
-    <Pressable style={styles.row} onPress={onPress}>
+    <Pressable style={styles.row} onPress={onPress} onLongPress={onLongPress}>
       <Thumb uri={item.imageUrl} />
       <View style={{ flex: 1, gap: 4 }}>
         <Text style={styles.rowTitle} numberOfLines={2}>
-          {item.productName ?? "İsimsiz ürün"}
+          {displayName(item)}
         </Text>
         {item.brands && (
           <Text style={styles.rowSub} numberOfLines={1}>

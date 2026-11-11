@@ -3,17 +3,19 @@ import { CompositeScreenProps } from "@react-navigation/native";
 import { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "../components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../AppContext";
 import { useAuth } from "../AuthContext";
 import { Bell } from "../components/Bell";
+import { NameDialog } from "../components/NameDialog";
 import { ProgressRing } from "../components/ProgressRing";
 import { ScoreChip, Thumb } from "../components/common";
+import { displayName } from "../displayName";
 import { resultState } from "../ingredients";
 import { MainTabParamList, RootStackParamList } from "../navigation/types";
-import { Period, ROUTINES } from "../routine";
+import { STEP_SUGGESTIONS } from "../routine";
 import { useLayout } from "../responsive";
 import { colors } from "../theme";
 import { humidityAdvice, loadSkinWeather, SkinWeather, uvAdvice, uvLevel } from "../weather";
@@ -32,6 +34,7 @@ function greeting() {
 
 /** Today's routine, in words for the green card. */
 function routineMood(done: number, total: number): { title: string; text: string } {
+  if (total === 0) return { title: "Rutinini oluştur", text: "Sabah ve akşam bakım adımlarını kendin ekle." };
   if (done === 0) return { title: "Başlayalım", text: "Bugünkü bakım rutinin seni bekliyor." };
   if (done < total) return { title: "Dengede", text: "Rutinin yolunda gidiyor. Böyle devam et!" };
   return { title: "Harika", text: "Bugünkü rutinini tamamladın. Cildin sana teşekkür ediyor!" };
@@ -42,19 +45,24 @@ export function HomeScreen({ navigation }: Props) {
   const { user } = useAuth();
   const layout = useLayout();
   const firstName = user?.firstName?.trim() || null;
-  const { history, skinProfile, routineDone, routineProducts, toggleRoutineStep } = useApp();
-  const [period, setPeriod] = useState<Period>(new Date().getHours() < 15 ? "Sabah" : "Akşam");
+  const { history, skinProfile, routineDone, routineProducts, routineSteps, addRoutineStep, removeRoutineStep, toggleRoutineStep } = useApp();
+  const [adding, setAdding] = useState(false);
   const [weather, setWeather] = useState<SkinWeather | null | "loading">("loading");
-  const steps = ROUTINES[period];
+  const steps = routineSteps;
   const done = steps.filter((s) => routineDone.includes(s.key)).length;
-  const allSteps = [...ROUTINES.Sabah, ...ROUTINES.Akşam];
-  const allDone = allSteps.filter((s) => routineDone.includes(s.key)).length;
-  const percent = Math.round((allDone / allSteps.length) * 100);
-  const mood = routineMood(allDone, allSteps.length);
+  const percent = steps.length ? Math.round((done / steps.length) * 100) : 0;
+  const mood = routineMood(done, steps.length);
 
   useEffect(() => {
     loadSkinWeather().then(setWeather);
   }, []);
+
+  function confirmRemove(key: string, title: string) {
+    Alert.alert("Adımı sil", `"${title}" rutininden silinsin mi?`, [
+      { text: "Vazgeç", style: "cancel" },
+      { text: "Sil", style: "destructive", onPress: () => removeRoutineStep(key) },
+    ]);
+  }
 
   const uv = weather !== "loading" && weather ? weather : null;
 
@@ -81,7 +89,7 @@ export function HomeScreen({ navigation }: Props) {
         </Pressable>
 
         <View style={styles.statusCard}>
-          <ProgressRing size={74} stroke={6} progress={allDone / allSteps.length} color={colors.primaryMint} track="rgba(255,255,255,0.18)">
+          <ProgressRing size={74} stroke={6} progress={percent / 100} color={colors.primaryMint} track="rgba(255,255,255,0.18)">
             <Text style={styles.ringText}>{percent}</Text>
           </ProgressRing>
           <View style={styles.flex}>
@@ -123,18 +131,12 @@ export function HomeScreen({ navigation }: Props) {
           <Text style={styles.sectionNote}>{`${done} / ${steps.length} tamam`}</Text>
         </View>
         <View style={styles.routine}>
-          <View style={styles.tabs}>
-            {(Object.keys(ROUTINES) as Period[]).map((p) => (
-              <Pressable key={p} style={[styles.tab, period === p && styles.tabOn]} onPress={() => setPeriod(p)}>
-                <Text style={[styles.tabText, period === p && styles.tabTextOn]}>{p}</Text>
-              </Pressable>
-            ))}
-          </View>
           {steps.map((s, i) => {
             const on = routineDone.includes(s.key);
             const product = routineProducts[s.key];
             return (
-              <Pressable key={s.key} style={[styles.step, i > 0 && styles.divider]} onPress={() => toggleRoutineStep(s.key)}>
+              <Pressable key={s.key} style={[styles.step, i > 0 && styles.divider]} onPress={() => toggleRoutineStep(s.key)}
+                onLongPress={() => confirmRemove(s.key, s.title)}>
                 <View style={[styles.check, on && styles.checkOn]}>{on && <Ionicons name="checkmark" size={15} color="#fff" />}</View>
                 <View style={styles.flex}>
                   <Text style={styles.stepTitle}>{s.title}</Text>
@@ -146,7 +148,24 @@ export function HomeScreen({ navigation }: Props) {
               </Pressable>
             );
           })}
+          {steps.length === 0 && <Text style={styles.emptyRoutine}>{"Rutinin henüz boş. Kullandığın bakım adımlarını sırayla ekleyerek kendi rutinini oluştur."}</Text>}
+          <Pressable style={[styles.step, steps.length > 0 && styles.divider]} onPress={() => setAdding(true)}>
+            <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+            <Text style={styles.addText}>{steps.length === 0 ? "Rutinimi oluştur" : "Adım ekle"}</Text>
+          </Pressable>
         </View>
+        <NameDialog
+          visible={adding}
+          title="Rutine adım ekle"
+          placeholder="Adım adı (örn. Göz kremi)"
+          suggestions={STEP_SUGGESTIONS}
+          confirmLabel="Ekle"
+          onClose={() => setAdding(false)}
+          onSubmit={(title) => {
+            addRoutineStep(title);
+            setAdding(false);
+          }}
+        />
 
         {history.length > 0 && <Text style={[styles.section, styles.recentTitle]}>Son taramalar</Text>}
       </View>
@@ -157,7 +176,7 @@ export function HomeScreen({ navigation }: Props) {
             <Pressable key={item.barcode} style={[styles.miniCard, { width: layout.scale(140) }]} onPress={() => navigation.navigate("ProductDetail", { barcode: item.barcode, product: item.product })}>
               <Thumb uri={item.imageUrl} size={64} />
               <Text style={styles.miniTitle} numberOfLines={2}>
-                {item.productName ?? "İsimsiz ürün"}
+                {displayName(item)}
               </Text>
               <ScoreChip rating={item.cleanRating} score={item.cleanScore} listRead={!!item.product && resultState(item.product) === "SCAN_COMPLETE_ANALYSIS_BLOCKED"} />
             </Pressable>
@@ -194,12 +213,9 @@ const styles = StyleSheet.create({
   sectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 24, marginBottom: 10 },
   section: { fontSize: 18, fontWeight: "600", color: colors.text },
   sectionNote: { fontSize: 13, color: colors.muted },
+  emptyRoutine: { fontSize: 13, color: colors.muted, lineHeight: 19, paddingTop: 12 },
+  addText: { fontSize: 15, fontWeight: "500", color: colors.primary },
   routine: { backgroundColor: colors.card, borderRadius: 18, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingBottom: 4 },
-  tabs: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: colors.border },
-  tab: { flex: 1, alignItems: "center", paddingVertical: 11, marginBottom: -1, borderBottomWidth: 2, borderBottomColor: "transparent" },
-  tabOn: { borderBottomColor: colors.primary },
-  tabText: { fontSize: 14, color: colors.muted },
-  tabTextOn: { color: colors.primary, fontWeight: "600" },
   step: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
   divider: { borderTopWidth: 1, borderTopColor: colors.border },
   check: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: colors.line, alignItems: "center", justifyContent: "center" },

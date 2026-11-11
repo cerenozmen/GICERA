@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { AuthApiError, authApi, AuthResult, AuthUser } from "./authApi";
+import { AuthApiError, authApi, AuthResult, AuthUser, StoredData } from "./authApi";
 import { getGoogleIdToken, googleSignOut } from "./google";
-import { SkinProfile, StoredAuth, storage } from "./storage";
+import { AccountData, SkinProfile, StoredAuth, storage } from "./storage";
 
 /** Refresh a little before the access token runs out. */
 const EXPIRY_MARGIN_S = 60;
@@ -28,6 +28,10 @@ interface AuthState {
   saveSkinProfile: (profile: SkinProfile) => Promise<void>;
   /** Raises the account's used free-read count (the server never lowers it). */
   saveScansUsed: (used: number) => Promise<void>;
+  /** The phone data kept with the account (null: none saved yet). */
+  loadAccountData: () => Promise<StoredData | null>;
+  /** Saves it; rejects with status 409 when the account holds a newer copy. */
+  saveAccountData: (data: AccountData, updatedAt: number) => Promise<StoredData>;
   changeEmail: (currentPassword: string, newEmail: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
@@ -169,6 +173,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [authed, setUser]
   );
 
+  const loadAccountData = useCallback<AuthState["loadAccountData"]>(() => authed((token) => authApi.getData(token)), [authed]);
+
+  const saveAccountData = useCallback<AuthState["saveAccountData"]>(
+    (data, updatedAt) => authed((token) => authApi.putData(token, data, updatedAt)),
+    [authed]
+  );
+
   const changeEmail = useCallback<AuthState["changeEmail"]>(
     async (currentPassword, newEmail) => {
       await authed((token) => authApi.changeEmail(token, currentPassword, newEmail));
@@ -198,10 +209,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateName,
       saveSkinProfile,
       saveScansUsed,
+      loadAccountData,
+      saveAccountData,
       changeEmail,
       changePassword,
     }),
-    [ready, stored, signUp, signInWithLink, resendConfirmation, signIn, signInWithGoogle, resetPassword, signOut, refreshUser, updateName, saveSkinProfile, saveScansUsed, changeEmail, changePassword]
+    [ready, stored, signUp, signInWithLink, resendConfirmation, signIn, signInWithGoogle, resetPassword, signOut, refreshUser, updateName, saveSkinProfile, saveScansUsed, loadAccountData, saveAccountData, changeEmail, changePassword]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

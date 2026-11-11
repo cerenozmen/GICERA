@@ -181,7 +181,7 @@ export function IngredientScanScreen({ navigation, route }: NativeStackScreenPro
     const stamp = `${String(now.getDate()).padStart(2, "0")}.${String(now.getMonth() + 1).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     const product: Product = {
       barcode: id,
-      productName: route.params?.productName ?? "Kendi taramam",
+      productName: route.params?.productName ?? `İçerik taraması · ${stamp}`,
       brands: `Kendi içerik listem · ${stamp}`,
       ingredientsText: result.ingredientsText,
       imageUrl: null,

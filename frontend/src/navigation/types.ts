@@ -31,6 +31,7 @@ export type RootStackParamList = {
   /** `fromScan`: just read by the scanner ("Ürün içeriği okundu"), going on to the result. */
   IngredientAnalysis: { product: Product; fromScan?: boolean };
   PregnancyMode: undefined;
+  Allergens: undefined;
   /** The ingredient list scan (the live scanner, IngredientScanScreen). */
   IngredientScan: { productName?: string } | undefined;
 };

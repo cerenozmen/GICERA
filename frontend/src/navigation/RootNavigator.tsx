@@ -14,6 +14,7 @@ import { IngredientScanScreen } from "../screens/IngredientScanScreen";
 import { NewPostScreen } from "../screens/NewPostScreen";
 import { NotificationsScreen } from "../screens/NotificationsScreen";
 import { PostDetailScreen } from "../screens/PostDetailScreen";
+import { AllergenScreen } from "../screens/AllergenScreen";
 import { PregnancyModeScreen } from "../screens/PregnancyModeScreen";
 import { ProductDetailScreen } from "../screens/ProductDetailScreen";
 import { ProductNotFoundScreen } from "../screens/ProductNotFoundScreen";
@@ -49,6 +50,7 @@ export function RootNavigator() {
       <Stack.Screen name="ProductNotFound" component={ProductNotFoundScreen} />
       <Stack.Screen name="IngredientAnalysis" component={IngredientAnalysisScreen} />
       <Stack.Screen name="PregnancyMode" component={PregnancyModeScreen} />
+      <Stack.Screen name="Allergens" component={AllergenScreen} />
       <Stack.Screen name="Favorites" component={FavoritesScreen} />
       <Stack.Screen name="PostDetail" component={PostDetailScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />

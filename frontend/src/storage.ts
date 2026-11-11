@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AuthSession, AuthUser } from "./authApi";
-import { RoutineProduct } from "./routine";
+import { RoutineProduct, RoutineStep } from "./routine";
 import type { PlanId } from "./subscription";
 import { Product } from "./types";
 
@@ -13,6 +13,8 @@ export interface ProductSnapshot {
   cleanRating: Product["cleanRating"];
   /** Full product, kept only for own-list analyses ("custom:" barcodes) because the server can't return them again. */
   product?: Product;
+  /** What the product is, named by the server for scans whose own name is unreadable or missing. */
+  autoName?: string;
 }
 
 export interface Settings {
@@ -43,6 +45,31 @@ export const EMPTY_PROFILE: SkinProfile = {
   skinCondition: null,
 };
 
+/** What follows the signed-in account from phone to phone (DataSync keeps it on the server). */
+export interface AccountData {
+  routineSteps: RoutineStep[];
+  routineProducts: Record<string, RoutineProduct>;
+  avoided: string[];
+  history: ProductSnapshot[];
+  favorites: ProductSnapshot[];
+}
+
+export const EMPTY_ACCOUNT_DATA: AccountData = { routineSteps: [], routineProducts: {}, avoided: [], history: [], favorites: [] };
+
+/** The same data in a fixed key order, with anything missing filled in (the server may hand it back reordered or partial). */
+export function normalizeAccountData(data: Partial<AccountData> | null | undefined): AccountData {
+  return {
+    routineSteps: data?.routineSteps ?? [],
+    routineProducts: data?.routineProducts ?? {},
+    avoided: data?.avoided ?? [],
+    history: data?.history ?? [],
+    favorites: data?.favorites ?? [],
+  };
+}
+
+export const isEmptyAccountData = (data: AccountData) =>
+  !data.routineSteps.length && !Object.keys(data.routineProducts).length && !data.avoided.length && !data.history.length && !data.favorites.length;
+
 /** Today's ticked routine steps: the date they belong to, so they reset each day. */
 export interface RoutineChecks {
   date: string;
@@ -67,6 +94,10 @@ const KEYS = {
   nickname: "gicera.nickname",
   notificationsSeen: "gicera.notificationsSeen",
   routineProducts: "gicera.routineProducts",
+  routineSteps: "gicera.routineSteps",
+  oldCustomSteps: "gicera.customRoutineSteps",
+  avoided: "gicera.avoidedIngredients",
+  dataChangedAt: "gicera.dataChangedAt",
   forumDevice: "gicera.forumDevice",
   auth: "gicera.auth",
   scansUsed: "gicera.scansUsed",
@@ -104,6 +135,18 @@ export const storage = {
   loadRoutine: () => read<RoutineChecks>(KEYS.routine, { date: "", done: [] }),
   saveRoutine: (value: RoutineChecks) => write(KEYS.routine, value),
   loadRoutineProducts: () => read<Record<string, RoutineProduct>>(KEYS.routineProducts, {}),
+  /** The routine's steps; a routine kept as separate Sabah / Akşam lists is merged into one. */
+  loadRoutineSteps: async (): Promise<RoutineStep[]> => {
+    const steps = await read<RoutineStep[] | null>(KEYS.routineSteps, null);
+    if (steps) return steps;
+    const old = await read<Partial<Record<"Sabah" | "Akşam", RoutineStep[]>>>(KEYS.oldCustomSteps, {});
+    return [...(old.Sabah ?? []), ...(old["Akşam"] ?? [])];
+  },
+  saveRoutineSteps: (value: RoutineStep[]) => write(KEYS.routineSteps, value),
+  loadAvoided: () => read<string[]>(KEYS.avoided, []),
+  loadDataChangedAt: () => read<number>(KEYS.dataChangedAt, 0),
+  saveDataChangedAt: (value: number) => write(KEYS.dataChangedAt, value),
+  saveAvoided: (value: string[]) => write(KEYS.avoided, value),
   saveRoutineProducts: (value: Record<string, RoutineProduct>) => write(KEYS.routineProducts, value),
   loadNotificationsSeen: () => read<string>(KEYS.notificationsSeen, ""),
   saveNotificationsSeen: (value: string) => write(KEYS.notificationsSeen, value),

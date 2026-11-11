@@ -1,10 +1,12 @@
 import { CompositeScreenProps } from "@react-navigation/native";
 import { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "../components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../AppContext";
+import { NameDialog } from "../components/NameDialog";
 import { EmptyState, PrimaryButton, ProductRow } from "../components/common";
 import { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { colors, serif } from "../theme";
@@ -16,12 +18,14 @@ type Props = CompositeScreenProps<
 
 export function HistoryScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { history } = useApp();
+  const { history, renameHistoryItem } = useApp();
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const renamingItem = history.find((h) => h.barcode === renaming);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 32, gap: 12 }}>
       <Text style={styles.title}>Geçmiş</Text>
-      <Text style={styles.sub}>Taradığın ürünler burada. Son 20 tarama saklanır.</Text>
+      <Text style={styles.sub}>Taradığın ürünler burada. Son 20 tarama saklanır. Adı elle değiştirmek için ürüne uzun bas.</Text>
       {history.length === 0 ? (
         <EmptyState icon="time-outline" title="Henüz tarama yok" text="Bir ürünün barkodunu ya da içerik listesini tarattığında burada görünecek.">
           <PrimaryButton label="Ürün tara" icon="scan-outline" onPress={() => navigation.navigate("Scan")} style={{ marginTop: 8 }} />
@@ -29,10 +33,21 @@ export function HistoryScreen({ navigation }: Props) {
       ) : (
         <View style={{ gap: 12 }}>
           {history.map((item) => (
-            <ProductRow key={item.barcode} item={item} onPress={() => navigation.navigate("ProductDetail", { barcode: item.barcode, product: item.product })} />
+            <ProductRow key={item.barcode} item={item} onPress={() => navigation.navigate("ProductDetail", { barcode: item.barcode, product: item.product })} onLongPress={() => setRenaming(item.barcode)} />
           ))}
         </View>
       )}
+      <NameDialog
+        visible={!!renamingItem}
+        title="Ürün adını değiştir"
+        initialValue={renamingItem?.productName ?? ""}
+        confirmLabel="Kaydet"
+        onClose={() => setRenaming(null)}
+        onSubmit={(name) => {
+          if (renaming) renameHistoryItem(renaming, name);
+          setRenaming(null);
+        }}
+      />
     </ScrollView>
   );
 }
